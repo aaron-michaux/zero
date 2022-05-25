@@ -1,11 +1,11 @@
 
-#zero
+# zero
 
-=== About ===
+### About
 
 This repo is a playground where I teach myself new stuff about C++.
 
-=== Building ===
+### Building
 
 Since this is a personal project, it very much is "works for me". I use Ubuntu and MacOS.
 
@@ -16,7 +16,7 @@ The `./run.sh` script is a front end to the Makefile... it:
  * Runs make
  * Runs the code, including under gdb.
 
-=== Plan ===
+### Plan
 
 #### Build System
 
