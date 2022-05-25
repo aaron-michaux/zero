@@ -3,6 +3,8 @@
 
 #include "status.hpp"
 
+#include "niggly/net/websocket-session.hpp"
+
 #include <chrono>
 #include <functional>
 #include <atomic>
@@ -11,11 +13,11 @@
 
 namespace niggly::net {
 
-class RpcAgent;
+template <typename Executor> class RpcAgent;
 
-class CallContext {
+template <typename Executor> class CallContext {
 private:
-  std::shared_ptr<RpcAgent> agent_;
+  std::shared_ptr<RpcAgent<Executor>> agent_;
   uint64_t request_id_{0};
   std::chrono::steady_clock::time_point deadline_;
   std::function<void(Status status)> completion_{};
@@ -26,14 +28,14 @@ private:
   void finish_call_locked_(Status status, std::function<bool(WebsocketBufferType&)> serializer);
 
 public:
-  CallContext(std::shared_ptr<RpcAgent> agent, uint64_t request_id,
-              std::chrono::steady_clock deadline)
+  CallContext(std::shared_ptr<RpcAgent<Executor>> agent, uint64_t request_id,
+              std::chrono::steady_clock::time_point deadline)
       : agent_{std::move(agent)}, request_id_{request_id}, deadline_{deadline} {}
 
   /**
    * @brief The deadline for the call.
    */
-  std::chrono::steady_clock::time_point deadline() const { return deadline_; }
+  std::chrono::steady_clock::time_point deadline() const;
 
   /**
    * @brief Attempt to cancel the call; may not work, since it could race with `finishCall`.
@@ -53,7 +55,7 @@ public:
   /**
    * @brief A completion function that is executed after the response is sent.
    */
-  void set_completion(std::function<void(Status status)> thunk) { completion_ = std::move(thunk); }
+  void set_completion(std::function<void(Status status)> thunk);
 
   /**
    * @brief Calling this method sends the response to the wire.
@@ -64,3 +66,5 @@ public:
 };
 
 } // namespace niggly::net
+
+#include "call-context_impl.hpp"

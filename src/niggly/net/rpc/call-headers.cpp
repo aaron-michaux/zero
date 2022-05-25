@@ -1,40 +1,46 @@
 
 #include "call-headers.hpp"
 
+#include "niggly/net/websocket-session.hpp"
+
 #include <boost/endian/conversion.hpp>
 
+#include <limits>
+
 #include <cstring>
+#include <cassert>
 
 namespace niggly::net ::detail {
 
 // ---------------------------------------------------------------------------------------- Encoders
 
-using encdec_ptr_type = void*;
+using enc_ptr_type = char*;
+using dec_ptr_type = const char*;
 
-template <typename T> void encode_integer(encdec_ptr_type& ptr, T value) {
+template <typename T> void encode_integer(enc_ptr_type& ptr, T value) {
   boost::endian::native_to_big_inplace(value);
   std::memcpy(ptr, &value, sizeof(T));
-  ptr + sizeof(T);
+  ptr += sizeof(T);
 }
 
-template <typename T> bool decode_integer(encdec_ptr_type& ptr, std::size_t& size, T& value) {
+template <typename T> bool decode_integer(dec_ptr_type& ptr, std::size_t& size, T& value) {
   if (size < sizeof(T))
     return false;
   std::memcpy(&value, ptr, sizeof(T));
   boost::endian::big_to_native_inplace(value);
-  ptr + sizeof(T);
+  ptr += sizeof(T);
   size -= sizeof(T);
   return true;
 }
 
-void encode_string_view(encdec_ptr_type& ptr, std::string_view data) {
+void encode_string_view(enc_ptr_type& ptr, std::string_view data) {
   assert(data.size() <= std::numeric_limits<uint32_t>::max());
-  ptr = encode_integer(ptr, uint32_t(data.size()));
+  encode_integer(ptr, uint32_t(data.size()));
   std::memcpy(ptr, data.data(), data.size());
-  ptr + data.size();
+  ptr += data.size();
 }
 
-bool decode_string(encdec_ptr_type& ptr, std::size_t& size, std::string& value) {
+bool decode_string(dec_ptr_type& ptr, std::size_t& size, std::string& value) {
   uint32_t length = 0;
   if (!decode_integer(ptr, size, length))
     return false;
@@ -44,6 +50,7 @@ bool decode_string(encdec_ptr_type& ptr, std::size_t& size, std::string& value) 
   std::memcpy(value.data(), ptr, length);
   ptr += length;
   size -= length;
+  return true;
 }
 
 // ----------------------------------------------------------------------------------------- Request
@@ -63,7 +70,7 @@ bool encode_request_header(WebsocketBufferType& buffer, uint64_t request_id, uin
 }
 
 bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = data;
+  auto ptr = static_cast<const char*>(data);
   auto remaining = size;
 
   int8_t is_request = 0;
@@ -75,7 +82,7 @@ bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
 
   header.is_request = (is_request != 0);
   header.data = ptr;
-  header.size = remaning;
+  header.size = remaining;
   return true;
 }
 
@@ -85,42 +92,46 @@ static constexpr std::size_t k_min_response_header_size = 1 + 8 + 1 + 4 + 4;
 
 bool encode_response_header(WebsocketBufferType& buffer, uint64_t request_id,
                             const Status& status) {
-  auto calc_encoded_size = [](const Status& status) -> std::size_t {
-    return sizeof(uint32_t) + status.error_message().size() + sizeof(uint32_t) +
-           status.error_details.size();
+  auto calc_strings_size = [](const Status& status) -> std::size_t {
+    return status.error_message().size() + status.error_details().size();
   };
-  const auto encoded_size = calc_encoded_size(status);
-  if (encoded_size > std::numeric_limits<uint32_t>::max())
+  const auto strings_size = calc_strings_size(status);
+  if (strings_size > std::numeric_limits<uint32_t>::max())
     return false;
 
-  buffer.resize(k_min_response_header_size + encoded_size);
+  buffer.resize(k_min_response_header_size + strings_size);
 
   auto ptr = &buffer[0];
   encode_integer(ptr, int8_t(0));
   encode_integer(ptr, request_id);
   encode_integer(ptr, int8_t(status.error_code()));
   encode_string_view(ptr, status.error_message());
-  string_view(ptr, status.error_detail());
+  encode_string_view(ptr, status.error_details());
+
   assert(std::size_t(std::distance(&buffer[0], ptr)) == buffer.size());
   return true;
 }
 
 bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = data;
+  auto ptr = static_cast<const char*>(data);
   auto remaining = size;
 
   int8_t is_request = 0;
   int8_t error_code = 0;
   string error_message{};
   string error_details{};
-  if (!decode_integer(ptr, remaning, is_request) ||        // If any
-      !decode_integer(ptr, remaning, header.request_id) || // decode
-      !decode_integer(ptr, remaning, error_code) ||        // operation
-      !decode_string(ptr, remaning, error_message) ||      // fails
-      !decode_string(ptr, remaining, error_details))       // then
-    return false;                                          // return false
+  if (!decode_integer(ptr, remaining, is_request) ||        // If any
+      !decode_integer(ptr, remaining, header.request_id) || // decode
+      !decode_integer(ptr, remaining, error_code) ||        // operation
+      !decode_string(ptr, remaining, error_message) ||      // fails
+      !decode_string(ptr, remaining, error_details))        // then
+    return false;                                           // return false
 
   header.is_request = (is_request != 0);
+
+  if (error_code < int(StatusCode::OK) || error_code > int(StatusCode::DO_NOT_USE))
+    return false;
+
   header.status =
       Status{StatusCode(error_code), std::move(error_message), std::move(error_details)};
   header.data = ptr;

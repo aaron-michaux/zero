@@ -3,11 +3,9 @@
 
 #include "status.hpp"
 
-#include <cstdint>
+#include "niggly/net/websocket-session.hpp"
 
-namespace niggly::net {
-class WebsocketBufferType;
-}
+#include <cstdint>
 
 namespace niggly::net::detail {
 
@@ -33,7 +31,7 @@ struct ResponseEnvelopeHeader {
   Status status;             //!< The response status from the server
   const void* data{nullptr}; //!< Reponse data, if relevant
   std::size_t size{0};       //!< The amount of response data, if relevant
-}
+};
 
 /**
  * @return false iff there's an error encoding the data

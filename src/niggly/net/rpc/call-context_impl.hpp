@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "stdinc.hpp"
 
 #include "call-context.hpp"
@@ -7,29 +9,44 @@
 
 namespace niggly::net {
 
-void CallContext::cancel() {
+template <typename Extecutor>
+std::chrono::steady_clock::time_point CallContext<Extecutor>::deadline() const {
+  return deadline_;
+}
+
+template <typename Extecutor> void CallContext<Extecutor>::cancel() {
   std::lock_guard lock{padlock_};
   is_cancelled_ = true;
   finiah_call_locked_({StatusCode::CANCELLED}, nullptr);
 }
 
-bool CallContext::is_cancelled() const {
+template <typename Extecutor> bool CallContext<Extecutor>::is_cancelled() const {
   std::lock_guard lock{padlock_};
   return is_cancelled_;
 }
 
-bool CallContext::has_finished() const {
+template <typename Extecutor> bool CallContext<Extecutor>::has_finished() const {
   std::lock_guard lock{padlock_};
   return has_finished_;
 }
 
-void CallContext::finish_call(Status status, std::function<bool(WebsocketBufferType&)> serializer) {
+template <typename Extecutor>
+void CallContext<Extecutor>::set_completion(std::function<void(Status status)> thunk) {
+  completion_ = std::move(thunk);
+}
+
+template <typename Extecutor>
+void CallContext<Extecutor>::finish_call(Status status,
+                                         std::function<bool(WebsocketBufferType&)> serializer) {
   std::lock_guard lock{padlock_};
   finish_call_locked_(std::move(status), std::move(serializeer));
 }
 
-void CallContext::finish_call_locked_(Status status,
-                                      std::function<bool(WebsocketBufferType&)> serializer) {
+// ----------------------------------------------------------------------------- finish_call_locked_
+
+template <typename Extecutor>
+void CallContext<Extecutor>::finish_call_locked_(
+    Status status, std::function<bool(WebsocketBufferType&)> serializer) {
   // Check if this has already been done
   if (has_finished_)
     return;

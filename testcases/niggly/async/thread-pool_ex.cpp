@@ -19,14 +19,14 @@
 #include <queue>
 #include <vector>
 
-namespace niggly::async
-{
+namespace niggly::async {
 
 // ------------------------------------------------------------------- TEST_CASE
 //
-CATCH_TEST_CASE("ThreadPoolTimers", "[thread-pool-timers]")
-{
-   CATCH_SECTION("thread-pool-timers") { TRACE("HERE"); }
+CATCH_TEST_CASE("ThreadPoolTimers", "[thread-pool-timers]") {
+  CATCH_SECTION("thread-pool-timers") {
+    //
+  }
 }
 
 } // namespace niggly::async
