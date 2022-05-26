@@ -21,7 +21,7 @@ struct RequestEnvelopeHeader {
   std::size_t size{0};         //!< The amount of data
 };
 
-bool encode_request_header(WebsocketBufferType& buffer, uint64_t request_id, uint32_t call_id,
+bool encode_request_header(BufferType& buffer, uint64_t request_id, uint32_t call_id,
                            uint32_t deadline_millis);
 bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size);
 
@@ -36,7 +36,7 @@ struct ResponseEnvelopeHeader {
 /**
  * @return false iff there's an error encoding the data
  */
-bool encode_response_header(WebsocketBufferType& buffer, uint64_t request_id, const Status& status);
+bool encode_response_header(BufferType& buffer, uint64_t request_id, const Status& status);
 
 bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size);
 

@@ -68,8 +68,7 @@ public:
    * @param completion The completion handler to execute with the response.
    */
   void perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
-                        std::function<bool(WebsocketBufferType&)> serializer,
-                        CompletionHandler completion);
+                        std::function<bool(BufferType&)> serializer, CompletionHandler completion);
   /**
    * @brief Safely close resources
    */

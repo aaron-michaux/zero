@@ -59,7 +59,7 @@ bool decode_string(dec_ptr_type& ptr, std::size_t& size, std::string& value) {
 
 static constexpr std::size_t k_request_header_size = 17;
 
-bool encode_request_header(WebsocketBufferType& buffer, uint64_t request_id, uint32_t call_id,
+bool encode_request_header(BufferType& buffer, uint64_t request_id, uint32_t call_id,
                            uint32_t deadline_millis) {
   buffer.resize(k_request_header_size);
   auto ptr = &buffer[0];
@@ -92,8 +92,7 @@ bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
 
 static constexpr std::size_t k_min_response_header_size = 1 + 8 + 1 + 4 + 4;
 
-bool encode_response_header(WebsocketBufferType& buffer, uint64_t request_id,
-                            const Status& status) {
+bool encode_response_header(BufferType& buffer, uint64_t request_id, const Status& status) {
   auto calc_strings_size = [](const Status& status) -> std::size_t {
     return status.error_message().size() + status.error_details().size();
   };

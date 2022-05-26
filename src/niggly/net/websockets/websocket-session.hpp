@@ -53,12 +53,12 @@ public:
    * @brief Send a message to the other end.
    * @todo We need a movable allocator-aware type to encapsulate a sequence of buffers
    */
-  void send_message(WebsocketBufferType&& buffer);
+  void send_message(BufferType&& buffer);
 
   /**
    * @brief A `send_message` call is finished, and the buffer is being returned.
    * If not overriden, then the buffer will be deleted normally.
    */
-  virtual void on_return_buffer(WebsocketBufferType&& buffer) {}
+  virtual void on_return_buffer(BufferType&& buffer) {}
 };
 } // namespace niggly::net

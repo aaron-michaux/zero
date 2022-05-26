@@ -49,13 +49,12 @@ class AsyncWriteState {
 private:
   struct Pimpl {
     std::shared_ptr<Session> session;
-    std::function<void(WebsocketBufferType&& buffer)> completion;
-    WebsocketBufferType data;
+    std::function<void(BufferType&& buffer)> completion;
+    BufferType data;
     asio::const_buffer buffer;
 
-    Pimpl(std::shared_ptr<Session> session_,
-          std::function<void(WebsocketBufferType&& buffer)> completion_,
-          WebsocketBufferType&& data_)
+    Pimpl(std::shared_ptr<Session> session_, std::function<void(BufferType&& buffer)> completion_,
+          BufferType&& data_)
         : session{std::move(session_)}, completion{std::move(completion_)}, data{std::move(data_)},
           buffer{asio::buffer(data.data(), data.size())} {}
   };
@@ -66,8 +65,7 @@ public:
   using const_iterator = const asio::const_buffer*;
 
   AsyncWriteState(std::shared_ptr<Session> session,
-                  std::function<void(WebsocketBufferType&& buffer)> completion,
-                  WebsocketBufferType&& buffer)
+                  std::function<void(BufferType&& buffer)> completion, BufferType&& buffer)
       : pimpl_{std::make_shared<Pimpl>(std::move(session), std::move(completion),
                                        std::move(buffer))} {}
 
@@ -76,8 +74,10 @@ public:
 
   void on_complete(beast::error_code ec, std::size_t bytes_transferred) {
     if (ec)
-      INFO("error on write: {}", ec.message());
-    TRACE("write complete, {} transfered", bytes_transferred);
+      TRACE("error on write: {}; bytes-tranfered: {}", ec.message(), bytes_transferred);
+    else
+      TRACE("write complete, {} transfered", bytes_transferred);
+
     // Recycle the buffer if anyone wants it
     if (pimpl_->completion)
       pimpl_->completion(std::move(pimpl_->data));
@@ -190,13 +190,13 @@ public:
 
     // This indicates that the session was closed
     if (ec == beast::websocket::error::closed) {
-      INFO("session {}, closed", id_);
+      TRACE("session {}, closed", id_);
       external_session_->on_close(std::error_code{});
       return;
     }
 
     if (ec) {
-      INFO("session {}, error on read: {}", id_, ec.message());
+      TRACE("session {}, error on read: {}", id_, ec.message());
       external_session_->on_close(ec);
       return;
     }
@@ -216,8 +216,7 @@ public:
     do_read();
   }
 
-  void async_write(WebsocketBufferType&& buffer,
-                   std::function<void(WebsocketBufferType&& buffer)> completion) {
+  void async_write(BufferType&& buffer, std::function<void(BufferType&& buffer)> completion) {
     auto state = AsyncWriteState{shared_from_this(), std::move(completion), std::move(buffer)};
     ws_.async_write(state, //
                     beast::bind_front_handler(&AsyncWriteState::on_complete, state));
@@ -301,12 +300,10 @@ WebsocketSession::WebsocketSession() : pimpl_{std::make_unique<Pimpl>()} {}
 
 WebsocketSession::~WebsocketSession() = default;
 
-void WebsocketSession::send_message(WebsocketBufferType&& buffer) {
-  pimpl_->session->async_write(
-      std::move(buffer),
-      [this, session = pimpl_->session->shared_from_this()](WebsocketBufferType&& buffer) {
-        on_return_buffer(std::move(buffer));
-      });
+void WebsocketSession::send_message(BufferType&& buffer) {
+  pimpl_->session->async_write(std::move(buffer),
+                               [this, session = pimpl_->session->shared_from_this()](
+                                   BufferType&& buffer) { on_return_buffer(std::move(buffer)); });
 }
 
 // ------------------------------------------------------------------------------------------- Pimpl

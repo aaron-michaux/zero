@@ -14,8 +14,8 @@ CATCH_TEST_CASE("rpc-headers", "[rpc-headers]") {
 
   CATCH_SECTION("rpc-request-headers") {
 
-    auto test_request_header = [](WebsocketBufferType& buffer, uint64_t request_id,
-                                  uint32_t call_id, uint32_t deadline_millis) {
+    auto test_request_header = [](BufferType& buffer, uint64_t request_id, uint32_t call_id,
+                                  uint32_t deadline_millis) {
       RequestEnvelopeHeader header;
       CATCH_REQUIRE(encode_request_header(buffer, request_id, call_id, deadline_millis));
       CATCH_REQUIRE(decode(header, buffer.data(), buffer.size()));
@@ -27,7 +27,7 @@ CATCH_TEST_CASE("rpc-headers", "[rpc-headers]") {
       CATCH_REQUIRE(header.size == 0);
     };
 
-    WebsocketBufferType buffer;
+    BufferType buffer;
     for (auto request_id = 0; request_id < 2000; request_id += 1000)
       for (auto call_id = 0; call_id < 2000; call_id += 1000)
         for (auto deadline_millis = 0; deadline_millis < 2000; deadline_millis += 1000)
@@ -36,8 +36,7 @@ CATCH_TEST_CASE("rpc-headers", "[rpc-headers]") {
 
   CATCH_SECTION("rpc-response-headers") {
 
-    auto test_response_header = [](WebsocketBufferType& buffer, uint64_t request_id,
-                                   Status status) {
+    auto test_response_header = [](BufferType& buffer, uint64_t request_id, Status status) {
       ResponseEnvelopeHeader header;
       CATCH_REQUIRE(encode_response_header(buffer, request_id, status));
       CATCH_REQUIRE(decode(header, buffer.data(), buffer.size()));
@@ -48,7 +47,7 @@ CATCH_TEST_CASE("rpc-headers", "[rpc-headers]") {
       CATCH_REQUIRE(header.size == 0);
     };
 
-    WebsocketBufferType buffer;
+    BufferType buffer;
     for (auto request_id = 0; request_id < 2000; request_id += 1000) {
       test_response_header(buffer, request_id, Status{});
       test_response_header(buffer, request_id, Status{StatusCode::OK});

@@ -31,7 +31,7 @@ private:
   bool is_cancelled_{false};
   bool has_finished_{false};
 
-  void finish_call_locked_(Status status, std::function<bool(WebsocketBufferType&)> serializer);
+  void finish_call_locked_(Status status, std::function<bool(BufferType&)> serializer);
 
 public:
   CallContext(std::shared_ptr<RpcAgent<Executor>> agent, uint64_t request_id,
@@ -66,9 +66,9 @@ public:
   /**
    * @brief Calling this method sends the response to the wire.
    * @param status The status response to write.
-   * @param serializer A callback that writes the response to a `WebsocketBufferType`
+   * @param serializer A callback that writes the response to a `BufferType`
    */
-  void finish_call(Status status, std::function<bool(WebsocketBufferType&)> serializer = nullptr);
+  void finish_call(Status status, std::function<bool(BufferType&)> serializer = nullptr);
 };
 
 } // namespace niggly::net

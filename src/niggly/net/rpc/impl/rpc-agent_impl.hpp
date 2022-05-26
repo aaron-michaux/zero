@@ -5,9 +5,9 @@ namespace niggly::net {
 
 template <typename Executor>
 void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
-                                          std::function<bool(WebsocketBufferType&)> serializer,
+                                          std::function<bool(BufferType&)> serializer,
                                           CompletionHandler completion) {
-  WebsocketBufferType buffer;
+  BufferType buffer;
   const auto request_id = next_request_id_.fetch_add(1, std::memory_order_acq_rel);
 
   // Serialize the response header

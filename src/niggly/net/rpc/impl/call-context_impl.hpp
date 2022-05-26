@@ -31,7 +31,7 @@ void CallContext<Extecutor>::set_completion(std::function<void(Status status)> t
 
 template <typename Extecutor>
 void CallContext<Extecutor>::finish_call(Status status,
-                                         std::function<bool(WebsocketBufferType&)> serializer) {
+                                         std::function<bool(BufferType&)> serializer) {
   std::lock_guard lock{padlock_};
   finish_call_locked_(std::move(status), std::move(serializer));
 }
@@ -39,14 +39,14 @@ void CallContext<Extecutor>::finish_call(Status status,
 // ----------------------------------------------------------------------------- finish_call_locked_
 
 template <typename Extecutor>
-void CallContext<Extecutor>::finish_call_locked_(
-    Status status, std::function<bool(WebsocketBufferType&)> serializer) {
+void CallContext<Extecutor>::finish_call_locked_(Status status,
+                                                 std::function<bool(BufferType&)> serializer) {
   // Check if this has already been done
   if (has_finished_)
     return;
   has_finished_ = true;
 
-  WebsocketBufferType buffer;
+  BufferType buffer;
   buffer.reserve(512);
 
   auto set_and_send_error = [this, &buffer](StatusCode code) {
