@@ -18,7 +18,11 @@ class SessionImpl : public net::WebsocketSession {
     send_message(std::move(buffer));
   }
 
-  void on_close(std::error_code ec) override { INFO("closing session: {}", ec.message()); }
+  void on_close() override { INFO("closing session"); }
+
+  void on_error(net::WebsocketOperation operation, std::error_code ec) override {
+    LOG_ERR("error on op={}: {}", int(operation), ec.message());
+  }
 };
 
 CATCH_TEST_CASE("websockets-server", "[websockets-server]") {

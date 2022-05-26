@@ -47,6 +47,11 @@ public:
   std::error_code connect(std::string_view host, uint16_t port);
 
   /**
+   * @brief Close the endpoint.
+   */
+  std::error_code close();
+
+  /**
    * @brief A callback that is called when a connection receives a new message.
    * @note Must be threadsafe
    *
@@ -66,9 +71,7 @@ public:
    * @brief Non-write errors result in the session being closed
    * @note must be threadsafe
    */
-  virtual void on_error(WebsocketOperation operation, std::error_code ec) {
-    INFO("error on op={}: {}", int(operation), ec.message());
-  }
+  virtual void on_error(WebsocketOperation operation, std::error_code ec) {}
 
   /**
    * @brief Send a message to the other end.

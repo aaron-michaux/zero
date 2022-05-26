@@ -73,15 +73,7 @@ public:
   const boost::asio::const_buffer* begin() const { return &pimpl_->buffer; }
   const boost::asio::const_buffer* end() const { return begin() + 1; }
 
-  void on_complete(beast::error_code ec, std::size_t bytes_transferred) {
-    if (ec) {
-      session->on_error(WebsocketOperation::WRITE, ec);
-    }
-
-    // Recycle the buffer if anyone wants it
-    if (pimpl_->completion)
-      pimpl_->completion(std::move(pimpl_->data));
-  }
+  void on_complete(beast::error_code ec, std::size_t bytes_transferred);
 };
 
 // --------------------------------------------------------------------------------- ServerCallbacks
@@ -225,6 +217,18 @@ public:
   }
 };
 
+// --------------------------------------------------------------------------------- AsyncWriteState
+
+void AsyncWriteState::on_complete(beast::error_code ec, std::size_t bytes_transferred) {
+  if (ec) {
+    pimpl_->session->on_error(WebsocketOperation::WRITE, ec);
+  }
+
+  // Recycle the buffer if anyone wants it
+  if (pimpl_->completion)
+    pimpl_->completion(std::move(pimpl_->data));
+}
+
 // ---------------------------------------------------------------------------------------- Listener
 
 // Accepts incoming connections and launches the sessions
@@ -301,6 +305,10 @@ namespace niggly::net {
 WebsocketSession::WebsocketSession() : pimpl_{std::make_unique<Pimpl>()} {}
 
 WebsocketSession::~WebsocketSession() = default;
+
+std::error_code WebsocketSession::connect(std::string_view host, uint16_t port) { return {}; }
+
+std::error_code WebsocketSession::close() { return {}; }
 
 void WebsocketSession::send_message(BufferType&& buffer) {
   pimpl_->session->async_write(std::move(buffer),
