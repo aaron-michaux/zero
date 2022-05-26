@@ -5,6 +5,10 @@
 
 #include "niggly/net/buffer.hpp"
 
+namespace boost::asio {
+class io_context;
+}
+
 namespace niggly::net::detail {
 class Session;
 }
@@ -43,18 +47,18 @@ public:
   virtual ~WebsocketSession();
 
   /**
-   * @brief Connect to a websocket endpoint.
-   * Returns an error if already connected to an endpoint.
-   */
-  std::error_code connect(std::string_view host, uint16_t port);
-
-  /**
    * @brief Close the endpoint.
    * @param close_code A type byte integer sent to the other endpoint.
    * @param reason An optional utf-8 encoded string.
    * @see https://datatracker.ietf.org/doc/html/rfc6455#section-7.1.2
    */
   void close(uint16_t close_code = 0, std::string_view reason = "");
+
+  /**
+   * @brief Send a message to the other end.
+   * @todo We need a movable allocator-aware type to encapsulate a sequence of buffers
+   */
+  void send_message(BufferType&& buffer);
 
   /**
    * @brief A new connection has been made
@@ -85,16 +89,19 @@ public:
   virtual void on_error(WebsocketOperation operation, std::error_code ec) {}
 
   /**
-   * @brief Send a message to the other end.
-   * @todo We need a movable allocator-aware type to encapsulate a sequence of buffers
-   */
-  void send_message(BufferType&& buffer);
-
-  /**
    * @brief A `send_message` call is finished, and the buffer is being returned.
    * If not overriden, then the buffer will be deleted normally.
    */
   virtual void on_return_buffer(BufferType&& buffer) {}
 };
+
+/**
+ * @brief Connect to an endpoint.
+ *
+ * A copy `session` is stored internally by the websocket driver, and the instance will
+ * stay alive at least until the socket is closed or errors.
+ */
+void connect(std::shared_ptr<WebsocketSession> session, boost::asio::io_context& io_context,
+             std::string_view host, uint16_t port);
 
 } // namespace niggly::net

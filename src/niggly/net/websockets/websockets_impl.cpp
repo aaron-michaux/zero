@@ -1,5 +1,6 @@
 
 #include "websocket-server.hpp"
+#include "websocket-session.hpp"
 
 #include "niggly/utils.hpp"
 
@@ -36,8 +37,20 @@ class Listenter;
 
 // This pimpl needs to come first
 struct WebsocketSession::Pimpl {
+private:
+  std::mutex padlock_;
+  std::weak_ptr<detail::Session> session_{};
+
 public:
-  observer_ptr<detail::Session> session = nullptr;
+  void set_session(shared_ptr<detail::Session> session) {
+    std::lock_guard lock{padlock_};
+    session_ = session;
+  }
+
+  shared_ptr<detail::Session> session() {
+    std::lock_guard lock{padlock_};
+    return session_.lock();
+  }
 };
 
 } // namespace niggly::net
@@ -85,36 +98,59 @@ struct ServerCallbacks {
 // ----------------------------------------------------------------------------------------- Session
 
 class Session : public std::enable_shared_from_this<Session> {
-  const uint64_t id_;
-  std::shared_ptr<ServerCallbacks> callbacks_;
+  const uint64_t id_{0};                                         //! server only
+  std::shared_ptr<ServerCallbacks> callbacks_;                   //! server only
   std::shared_ptr<WebsocketSession> external_session_ = nullptr; //! External facing session
   beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
   beast::flat_buffer buffer_;
   std::chrono::milliseconds timeout_{30 * 1000};
 
-  asio::ip::tcp::resolver resolver_; // client only
-  std::string host_;                 // client only
-  uint16_t port_{0};                 // client only
+  asio::ip::tcp::resolver resolver_; //! client only
+  std::string host_;                 //! client only
+  uint16_t port_{0};                 //! client only
 
 public:
-  // Takes ownership of the socket
-  Session(asio::ip::tcp::socket&& socket, asio::ssl::context& ctx,
-          std::shared_ptr<ServerCallbacks> callbacks, uint64_t id)
-      : id_{id}, callbacks_{callbacks}, ws_{std::move(socket), ctx}, resolver_{ws_.get_executor()} {
+  // Takes ownership of the socket -- for building server-side sessions
+  Session(uint64_t id, asio::ip::tcp::socket&& socket, asio::ssl::context& ctx)
+      : id_{id}, ws_{std::move(socket), ctx}, resolver_{ws_.get_executor()} {}
+
+  Session(asio::io_context& ioc, asio::ssl::context& ctx)
+      : ws_{asio::make_strand(ioc), ctx}, resolver_{asio::make_strand(ioc)} {}
+
+  ~Session() {}
+
+  static std::shared_ptr<Session>
+  make_server_side_session(uint64_t id, asio::ip::tcp::socket&& socket, asio::ssl::context& ctx,
+                           std::shared_ptr<ServerCallbacks> callbacks) {
+    auto session = std::make_shared<Session>(id, std::move(socket), ctx);
+    session->callbacks_ = std::move(callbacks);
     try {
-      external_session_ = callbacks_->session_factory();
-      if (external_session_ == nullptr)
+      session->external_session_ = session->callbacks_->session_factory();
+      if (session->external_session_ == nullptr)
         FATAL("callback `session_factory` returned an empty result");
-      external_session_->pimpl_->session.reset(this);
+      session->external_session_->pimpl_->set_session(session);
     } catch (std::exception& e) {
       FATAL("callback `session_factory` must not throw: {}", e.what());
     } catch (...) {
       FATAL("callback `session_factory` must not throw");
     }
-    TRACE("session {} created", id_);
+    TRACE("server side session created, id={}", id);
+    return session;
   }
 
-  ~Session() { TRACE("session {} deleted", id_); }
+  // ws_.next_layer().set_verify_mode(asio::ssl::verify_none);
+  static void client_connect(std::shared_ptr<WebsocketSession> ws_session,
+                             asio::io_context& io_context, std::string_view host, uint16_t port) {
+    static asio::ssl::context ctx{asio::ssl::context::tlsv12_client};
+
+    assert(ws_session != nullptr);
+
+    auto internal_session = std::make_shared<Session>(io_context, ctx);
+    internal_session->external_session_ = ws_session;
+    ws_session->pimpl_->set_session(internal_session);
+
+    internal_session->connect(host, port);
+  }
 
   void close(uint16_t close_code, std::string_view reason) {
     auto ec = beast::error_code{};
@@ -393,8 +429,8 @@ private:
       INFO("rpc-server on-accept error: {}", ec.message());
     } else {
       // Create the session and run it
-      std::make_shared<Session>(std::move(socket), ctx_, callbacks_,
-                                session_id_.fetch_add(1, std::memory_order_acq_rel))
+      Session::make_server_side_session(session_id_.fetch_add(1, std::memory_order_acq_rel),
+                                        std::move(socket), ctx_, callbacks_)
           ->run_server_session();
     }
 
@@ -413,16 +449,29 @@ WebsocketSession::WebsocketSession() : pimpl_{std::make_unique<Pimpl>()} {}
 
 WebsocketSession::~WebsocketSession() = default;
 
-std::error_code WebsocketSession::connect(std::string_view host, uint16_t port) { return {}; }
-
 void WebsocketSession::close(uint16_t close_code, std::string_view reason) {
-  pimpl_->session->close(close_code, reason);
+  auto ptr = pimpl_->session();
+  if (ptr) {
+    ptr->close(close_code, reason);
+  } else {
+    // TODO, on_error
+  }
 }
 
 void WebsocketSession::send_message(BufferType&& buffer) {
-  pimpl_->session->async_write(std::move(buffer),
-                               [this, session = pimpl_->session->shared_from_this()](
-                                   BufferType&& buffer) { on_return_buffer(std::move(buffer)); });
+  auto ptr = pimpl_->session();
+  if (ptr) {
+    ptr->async_write(std::move(buffer), [this, session = ptr](BufferType&& buffer) {
+      on_return_buffer(std::move(buffer));
+    });
+  } else {
+    // TODO, on error
+  }
+}
+
+void connect(std::shared_ptr<WebsocketSession> session, asio::io_context& io_context,
+             std::string_view host, uint16_t port) {
+  detail::Session::client_connect(std::move(session), io_context, host, port);
 }
 
 // ------------------------------------------------------------------------------------------- Pimpl
