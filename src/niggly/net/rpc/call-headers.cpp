@@ -1,7 +1,9 @@
 
+#include "stdinc.hpp"
+
 #include "call-headers.hpp"
 
-#include "niggly/net/websocket-session.hpp"
+#include "niggly/net/buffer.hpp"
 
 #include <boost/endian/conversion.hpp>
 

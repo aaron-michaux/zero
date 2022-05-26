@@ -3,7 +3,7 @@
 
 #include "status.hpp"
 
-#include "niggly/net/websocket-session.hpp"
+#include "niggly/net/buffer.hpp"
 
 #include <cstdint>
 

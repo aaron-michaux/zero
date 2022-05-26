@@ -1,8 +1,14 @@
 
 #pragma once
 
-namespace niggly::net
-{
+#include <vector>
+
+namespace niggly::net {
+
+/**
+ * @todo We need a movable allocator-aware type to encapsulate a sequence of buffers
+ */
+using WebsocketBufferType = std::vector<char>;
 
 /*
 struct BufferChunk
@@ -70,4 +76,4 @@ template<uint32_t k_chunk_size> class WebsocketBuffer
 };
 */
 
-}
+} // namespace niggly::net

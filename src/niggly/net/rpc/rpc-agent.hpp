@@ -4,7 +4,7 @@
 #include "call-headers.hpp"
 #include "call-context.hpp"
 
-#include "niggly/net/websocket-session.hpp"
+#include "niggly/net/buffer.hpp"
 
 #include <boost/asio/steady_timer.hpp>
 
@@ -88,4 +88,4 @@ private:
 
 } // namespace niggly::net
 
-#include "rpc-agent_impl.hpp"
+#include "impl/rpc-agent_impl.hpp"

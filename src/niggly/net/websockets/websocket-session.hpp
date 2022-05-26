@@ -3,16 +3,13 @@
 
 #include "niggly/utils.hpp"
 
+#include "niggly/net/buffer.hpp"
+
 namespace niggly::net::detail {
 class Session;
 }
 
 namespace niggly::net {
-
-/**
- * @todo We need a movable allocator-aware type to encapsulate a sequence of buffers
- */
-using WebsocketBufferType = std::vector<char>;
 
 // -------------------------------------------------------------------------------- WebsocketSession
 

@@ -1,12 +1,6 @@
 
 #pragma once
 
-#include "stdinc.hpp"
-
-#include "call-context.hpp"
-
-#include "rpc-agent.hpp"
-
 namespace niggly::net {
 
 template <typename Extecutor>
@@ -17,7 +11,7 @@ std::chrono::steady_clock::time_point CallContext<Extecutor>::deadline() const {
 template <typename Extecutor> void CallContext<Extecutor>::cancel() {
   std::lock_guard lock{padlock_};
   is_cancelled_ = true;
-  finiah_call_locked_({StatusCode::CANCELLED}, nullptr);
+  finish_call_locked_({StatusCode::CANCELLED}, nullptr);
 }
 
 template <typename Extecutor> bool CallContext<Extecutor>::is_cancelled() const {
@@ -39,7 +33,7 @@ template <typename Extecutor>
 void CallContext<Extecutor>::finish_call(Status status,
                                          std::function<bool(WebsocketBufferType&)> serializer) {
   std::lock_guard lock{padlock_};
-  finish_call_locked_(std::move(status), std::move(serializeer));
+  finish_call_locked_(std::move(status), std::move(serializer));
 }
 
 // ----------------------------------------------------------------------------- finish_call_locked_
@@ -58,7 +52,7 @@ void CallContext<Extecutor>::finish_call_locked_(
   auto set_and_send_error = [this, &buffer](StatusCode code) {
     Status status{};
     buffer.clear();
-    encode_response_header(buffer, request_id_, status);
+    detail::encode_response_header(buffer, request_id_, status);
     agent_->send_message(std::move(buffer));
     if (completion_) {
       completion_(std::move(status));
@@ -71,7 +65,7 @@ void CallContext<Extecutor>::finish_call_locked_(
     return;
   }
 
-  if (!encode_response_header(buffer, request_id_, status)) {
+  if (!detail::encode_response_header(buffer, request_id_, status)) {
     set_and_send_error(StatusCode::DATA_LOSS);
     return;
   }

@@ -3,7 +3,7 @@
 
 #include "status.hpp"
 
-#include "niggly/net/websocket-session.hpp"
+#include "niggly/net/buffer.hpp"
 
 #include <chrono>
 #include <functional>
@@ -15,6 +15,12 @@ namespace niggly::net {
 
 template <typename Executor> class RpcAgent;
 
+/**
+ * @brief Context for a single active RPC call.
+ *
+ * This context exists on the server side of the RPC call, while it is being executed. There is no
+ * equivalent client side context object.
+ */
 template <typename Executor> class CallContext {
 private:
   std::shared_ptr<RpcAgent<Executor>> agent_;
@@ -67,4 +73,4 @@ public:
 
 } // namespace niggly::net
 
-#include "call-context_impl.hpp"
+#include "impl/call-context_impl.hpp"
