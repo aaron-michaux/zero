@@ -9,6 +9,8 @@
 namespace niggly::test {
 
 class SessionImpl : public net::WebsocketSession {
+  void on_connect() override { INFO("created a new connection"); }
+
   void on_receive(const void* data, std::size_t size) override {
     std::string_view s{static_cast<const char*>(data), size};
     INFO("received: {}", s);
@@ -18,7 +20,9 @@ class SessionImpl : public net::WebsocketSession {
     send_message(std::move(buffer));
   }
 
-  void on_close() override { INFO("closing session"); }
+  void on_close(uint16_t code, std::string_view reason) override {
+    INFO("closing session, code={}, reason='{}'", code, reason);
+  }
 
   void on_error(net::WebsocketOperation operation, std::error_code ec) override {
     LOG_ERR("error on op={}: {}", int(operation), ec.message());

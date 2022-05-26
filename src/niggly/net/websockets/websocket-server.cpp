@@ -80,31 +80,32 @@ public:
 
 struct ServerCallbacks {
   std::function<std::shared_ptr<WebsocketSession>()> session_factory;
-  std::function<void(std::shared_ptr<WebsocketSession>)> on_new_session;
 };
 
 // ----------------------------------------------------------------------------------------- Session
 
-// Echoes back all received WebSocket messages
 class Session : public std::enable_shared_from_this<Session> {
   const uint64_t id_;
   std::shared_ptr<ServerCallbacks> callbacks_;
   std::shared_ptr<WebsocketSession> external_session_ = nullptr; //! External facing session
   beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
   beast::flat_buffer buffer_;
+  std::chrono::milliseconds timeout_{30 * 1000};
+
+  asio::ip::tcp::resolver resolver_; // client only
+  std::string host_;                 // client only
+  uint16_t port_{0};                 // client only
 
 public:
-  // Take ownership of the socket
+  // Takes ownership of the socket
   Session(asio::ip::tcp::socket&& socket, asio::ssl::context& ctx,
           std::shared_ptr<ServerCallbacks> callbacks, uint64_t id)
-      : id_{id}, callbacks_{callbacks}, ws_{std::move(socket), ctx} {
+      : id_{id}, callbacks_{callbacks}, ws_{std::move(socket), ctx}, resolver_{ws_.get_executor()} {
     try {
       external_session_ = callbacks_->session_factory();
       if (external_session_ == nullptr)
         FATAL("callback `session_factory` returned an empty result");
       external_session_->pimpl_->session.reset(this);
-      if (callbacks_->on_new_session)
-        callbacks_->on_new_session(external_session_);
     } catch (std::exception& e) {
       FATAL("callback `session_factory` must not throw: {}", e.what());
     } catch (...) {
@@ -115,28 +116,133 @@ public:
 
   ~Session() { TRACE("session {} deleted", id_); }
 
+  void close(uint16_t close_code, std::string_view reason) {
+    auto ec = beast::error_code{};
+    auto close_reason = beast::websocket::close_reason{
+        beast::websocket::close_code{close_code}, beast::string_view{reason.data(), reason.size()}};
+
+    ws_.async_close(close_reason, [ptr = shared_from_this()](beast::error_code ec) {
+      if (ec == beast::websocket::error::closed)
+        ptr->on_close();
+      else
+        ptr->external_session_->on_error(WebsocketOperation::CLOSE, ec);
+    });
+  }
+
+  void on_close() {
+    uint16_t code = ws_.reason().code;
+    auto reason = ws_.reason().reason;
+    external_session_->on_close(code, std::string_view{reason.data(), reason.size()});
+  }
+
+  // @{ Client side functions
+  void connect(std::string_view host, uint16_t port) {
+    // Save these for later
+    host_ = std::string{std::cbegin(host), std::cend(host)};
+    port_ = port;
+
+    // Look up the domain name
+    resolver_.async_resolve(host.data(), std::to_string(port_).data(),
+                            beast::bind_front_handler(&Session::on_resolve, shared_from_this()));
+  }
+
+  void on_resolve(beast::error_code ec, asio::ip::tcp::resolver::results_type results) {
+    if (ec) {
+      on_error(WebsocketOperation::CONNECT, ec);
+      return;
+    }
+
+    // Set a timeout on the operation
+    beast::get_lowest_layer(ws_).expires_after(timeout_); // TODO, config
+
+    // Make the connection on the IP address we get from a lookup
+    beast::get_lowest_layer(ws_).async_connect(
+        results, beast::bind_front_handler(&Session::on_client_connect, shared_from_this()));
+  }
+
+  void on_client_connect(beast::error_code ec,
+                         asio::ip::tcp::resolver::results_type::endpoint_type ep) {
+    if (ec) {
+      on_error(WebsocketOperation::CONNECT, ec);
+      return;
+    }
+
+    // Set a timeout on the operation
+    beast::get_lowest_layer(ws_).expires_after(timeout_);
+
+// Set SNI Hostname (many hosts need this to handshake successfully)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+    const bool set_tls_successful =
+        SSL_set_tlsext_host_name(ws_.next_layer().native_handle(), host_.c_str());
+#pragma GCC diagnostic pop
+    if (!set_tls_successful) {
+      ec = beast::error_code{static_cast<int>(::ERR_get_error()), asio::error::get_ssl_category()};
+      on_error(WebsocketOperation::CONNECT, ec);
+      return;
+    }
+
+    // Update the host_ string. This will provide the value of the
+    // Host HTTP header during the WebSocket handshake.
+    // See https://tools.ietf.org/html/rfc7230#section-5.4
+    host_ += ':' + std::to_string(ep.port());
+
+    // Perform the SSL handshake
+    ws_.next_layer().async_handshake(
+        asio::ssl::stream_base::client,
+        beast::bind_front_handler(&Session::on_client_handshake, shared_from_this()));
+  }
+
+  void on_client_handshake(beast::error_code ec) {
+    if (ec) {
+      on_error(WebsocketOperation::HANDSHAKE, ec);
+      return;
+    }
+
+    // Turn off the timeout on the tcp_stream, because
+    // the websocket stream has its own timeout system.
+    beast::get_lowest_layer(ws_).expires_never();
+
+    // Set suggested timeout settings for the websocket
+    ws_.set_option(beast::websocket::stream_base::timeout::suggested(beast::role_type::client));
+
+    // Set a decorator to change the User-Agent of the handshake
+    ws_.set_option(
+        beast::websocket::stream_base::decorator([](beast::websocket::request_type& req) {
+          req.set(beast::http::field::user_agent,
+                  std::string{BOOST_BEAST_VERSION_STRING} + " websocket-client-async-ssl");
+        }));
+
+    // Perform the websocket handshake
+    ws_.async_handshake(host_, "/",
+                        beast::bind_front_handler(&Session::on_accept, shared_from_this()));
+  }
+  // @}
+
+  // @{ Server side functions
   // Get on the correct executor
-  void run() {
+  void run_server_session() {
     // We need to be executing within a strand to perform async operations
     // on the I/O objects in this session. Although not strictly necessary
     // for single-threaded contexts, this example code is written to be
     // thread-safe by default.
-    ::boost::asio::dispatch(ws_.get_executor(),
-                            beast::bind_front_handler(&Session::on_run, shared_from_this()));
+    boost::asio::dispatch(
+        ws_.get_executor(),
+        beast::bind_front_handler(&Session::on_run_server_session, shared_from_this()));
   }
 
   // Start the asynchronous operation
-  void on_run() {
+  void on_run_server_session() {
     // Set the timeout.
-    beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
+    beast::get_lowest_layer(ws_).expires_after(timeout_);
 
     // Perform the SSL handshake
     ws_.next_layer().async_handshake(
         asio::ssl::stream_base::server,
-        beast::bind_front_handler(&Session::on_handshake, shared_from_this()));
+        beast::bind_front_handler(&Session::on_server_handshake, shared_from_this()));
   }
 
-  void on_handshake(beast::error_code ec) {
+  void on_server_handshake(beast::error_code ec) {
     if (ec) {
       on_error(WebsocketOperation::HANDSHAKE, ec);
       return;
@@ -159,12 +265,15 @@ public:
     // Accept the websocket handshake
     ws_.async_accept(beast::bind_front_handler(&Session::on_accept, shared_from_this()));
   }
+  // @}
 
   void on_accept(beast::error_code ec) {
     if (ec) {
       on_error(WebsocketOperation::ACCEPT, ec);
       return;
     }
+
+    external_session_->on_connect();
 
     // Read a message
     do_read();
@@ -180,13 +289,11 @@ public:
 
     // This indicates that the session was closed
     if (ec == beast::websocket::error::closed) {
-      TRACE("session {}, closed", id_);
-      external_session_->on_close();
+      on_close();
       return;
     }
 
     if (ec) {
-      TRACE("session {}, error on read: {}", id_, ec.message());
       on_error(WebsocketOperation::READ, ec);
       return;
     }
@@ -288,7 +395,7 @@ private:
       // Create the session and run it
       std::make_shared<Session>(std::move(socket), ctx_, callbacks_,
                                 session_id_.fetch_add(1, std::memory_order_acq_rel))
-          ->run();
+          ->run_server_session();
     }
 
     // Accept another connection
@@ -308,7 +415,9 @@ WebsocketSession::~WebsocketSession() = default;
 
 std::error_code WebsocketSession::connect(std::string_view host, uint16_t port) { return {}; }
 
-std::error_code WebsocketSession::close() { return {}; }
+void WebsocketSession::close(uint16_t close_code, std::string_view reason) {
+  pimpl_->session->close(close_code, reason);
+}
 
 void WebsocketSession::send_message(BufferType&& buffer) {
   pimpl_->session->async_write(std::move(buffer),
@@ -338,7 +447,6 @@ struct WebsocketServer::Pimpl {
 
     auto callbacks = std::make_shared<detail::ServerCallbacks>();
     callbacks->session_factory = config.session_factory;
-    callbacks->on_new_session = config.on_new_session;
 
     listener = std::make_shared<detail::Listener>(
         io_context, context,

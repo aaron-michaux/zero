@@ -12,10 +12,12 @@ class Session;
 namespace niggly::net {
 
 enum class WebsocketOperation : int {
+  CONNECT,   // A (client) is initiating a connection
   HANDSHAKE, // websocket handshake
   ACCEPT,    // Accepting a new connection
   READ,      // During read operation
-  WRITE      // During a write operation
+  WRITE,     // During a write operation
+  CLOSE      // The websocket stream is being closed
 };
 
 // -------------------------------------------------------------------------------- WebsocketSession
@@ -48,8 +50,17 @@ public:
 
   /**
    * @brief Close the endpoint.
+   * @param close_code A type byte integer sent to the other endpoint.
+   * @param reason An optional utf-8 encoded string.
+   * @see https://datatracker.ietf.org/doc/html/rfc6455#section-7.1.2
    */
-  std::error_code close();
+  void close(uint16_t close_code = 0, std::string_view reason = "");
+
+  /**
+   * @brief A new connection has been made
+   * @note must be threadsafe
+   */
+  virtual void on_connect() {}
 
   /**
    * @brief A callback that is called when a connection receives a new message.
@@ -65,7 +76,7 @@ public:
    * @brief Should result in the resouce being freed
    * @note must be threadsafe
    */
-  virtual void on_close() {}
+  virtual void on_close(uint16_t code_code, std::string_view reason) {}
 
   /**
    * @brief Non-write errors result in the session being closed

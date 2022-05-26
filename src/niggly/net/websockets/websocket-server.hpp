@@ -31,13 +31,6 @@ public:
      * @note Must be set.
      */
     std::function<std::shared_ptr<WebsocketSession>()> session_factory;
-
-    /**
-     * @brief A callback that is called when a new connection starts.
-     * This method is called with the result of `session_factory`.
-     * @note Setting this is optional
-     */
-    std::function<void(std::shared_ptr<WebsocketSession>)> on_new_session;
   };
 
   /**

@@ -20,7 +20,9 @@ class SessionImpl : public net::WebsocketSession {
     send_message(std::move(buffer));
   }
 
-  void on_close() override { INFO("closing session"); }
+  void on_close(uint16_t code, std::string_view reason) override {
+    INFO("closing session, code={}, reason='{}'", code, reason);
+  }
 
   void on_error(net::WebsocketOperation operation, std::error_code ec) override {
     LOG_ERR("error on op={}: {}", int(operation), ec.message());
