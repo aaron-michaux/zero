@@ -11,6 +11,13 @@ class Session;
 
 namespace niggly::net {
 
+enum class WebsocketOperation : int {
+  HANDSHAKE, // websocket handshake
+  ACCEPT,    // Accepting a new connection
+  READ,      // During read operation
+  WRITE      // During a write operation
+};
+
 // -------------------------------------------------------------------------------- WebsocketSession
 
 /**
@@ -34,6 +41,12 @@ public:
   virtual ~WebsocketSession();
 
   /**
+   * @brief Connect to a websocket endpoint.
+   * Returns an error if already connected to an endpoint.
+   */
+  std::error_code connect(std::string_view host, uint16_t port);
+
+  /**
    * @brief A callback that is called when a connection receives a new message.
    * @note Must be threadsafe
    *
@@ -47,7 +60,15 @@ public:
    * @brief Should result in the resouce being freed
    * @note must be threadsafe
    */
-  virtual void on_close(std::error_code ec) = 0;
+  virtual void on_close() {}
+
+  /**
+   * @brief Non-write errors result in the session being closed
+   * @note must be threadsafe
+   */
+  virtual void on_error(WebsocketOperation operation, std::error_code ec) {
+    INFO("error on op={}: {}", int(operation), ec.message());
+  }
 
   /**
    * @brief Send a message to the other end.
@@ -61,4 +82,5 @@ public:
    */
   virtual void on_return_buffer(BufferType&& buffer) {}
 };
+
 } // namespace niggly::net

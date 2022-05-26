@@ -24,6 +24,7 @@
 #include <vector>
 
 namespace niggly::net {
+
 namespace asio = boost::asio;
 namespace beast = boost::beast;
 
@@ -73,10 +74,9 @@ public:
   const boost::asio::const_buffer* end() const { return begin() + 1; }
 
   void on_complete(beast::error_code ec, std::size_t bytes_transferred) {
-    if (ec)
-      TRACE("error on write: {}; bytes-tranfered: {}", ec.message(), bytes_transferred);
-    else
-      TRACE("write complete, {} transfered", bytes_transferred);
+    if (ec) {
+      session->on_error(WebsocketOperation::WRITE, ec);
+    }
 
     // Recycle the buffer if anyone wants it
     if (pimpl_->completion)
@@ -146,7 +146,7 @@ public:
 
   void on_handshake(beast::error_code ec) {
     if (ec) {
-      INFO("error on handshake: {}", ec.message());
+      on_error(WebsocketOperation::HANDSHAKE, ec);
       return;
     }
 
@@ -170,9 +170,7 @@ public:
 
   void on_accept(beast::error_code ec) {
     if (ec) {
-      INFO("session {}, error on accept: {}", id_, ec.message());
-      // TODO, on error
-      external_session_->on_close(ec);
+      on_error(WebsocketOperation::ACCEPT, ec);
       return;
     }
 
@@ -191,13 +189,13 @@ public:
     // This indicates that the session was closed
     if (ec == beast::websocket::error::closed) {
       TRACE("session {}, closed", id_);
-      external_session_->on_close(std::error_code{});
+      external_session_->on_close();
       return;
     }
 
     if (ec) {
       TRACE("session {}, error on read: {}", id_, ec.message());
-      external_session_->on_close(ec);
+      on_error(WebsocketOperation::READ, ec);
       return;
     }
 
@@ -220,6 +218,10 @@ public:
     auto state = AsyncWriteState{shared_from_this(), std::move(completion), std::move(buffer)};
     ws_.async_write(state, //
                     beast::bind_front_handler(&AsyncWriteState::on_complete, state));
+  }
+
+  void on_error(WebsocketOperation operation, std::error_code ec) {
+    external_session_->on_error(operation, ec);
   }
 };
 
