@@ -455,10 +455,15 @@ private:
     bool is_shutdown = false;
 
     if (ec) {
-      INFO("rpc-server on-accept error: {}", ec.message());
       {
         std::lock_guard lock{padlock_};
         is_shutdown = is_shutdown_;
+      }
+
+      if (is_shutdown) {
+        INFO("websocket-server shutting down");
+      } else {
+        INFO("websocket-server on-accept error: {}", ec.message());
       }
 
     } else {
