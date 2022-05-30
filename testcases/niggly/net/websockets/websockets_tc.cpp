@@ -30,7 +30,7 @@ class SessionImpl : public net::WebsocketSession {
 };
 
 static void run_test_server(uint16_t port) {
-  net::AsioExecutionContext pool;
+  net::AsioExecutionContext pool{2};
 
   net::WebsocketServer::Config config;
   config.address = "0.0.0.0";

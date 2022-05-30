@@ -440,6 +440,7 @@ public:
       std::lock_guard lock{padlock_};
       is_shutdown_ = true;
     }
+
     asio::post(acceptor_.get_executor(), [this]() { finish_shutdown_(); });
   }
 
@@ -474,8 +475,10 @@ private:
       }
     }
 
-    // Accept another connection
-    do_accept_();
+    if (ec != boost::asio::error::operation_aborted) {
+      // Accept another connection
+      do_accept_();
+    }
   }
 
   void remove_session_(Session* session) {
@@ -485,6 +488,7 @@ private:
 
   void finish_shutdown_() {
     acceptor_.cancel(); // stop listening
+    TRACE("acceptor cancelled");
 
     decltype(sessions_) sessions;
     { // clean out the current sessions
