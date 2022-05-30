@@ -49,6 +49,11 @@ public:
    * @brief Start listening on the configured port.
    */
   std::error_code run();
+
+  /**
+   * @brief Orderly shutdown of the server
+   */
+  void shutdown();
 };
 
 } // namespace niggly::net

@@ -29,30 +29,33 @@ class SessionImpl : public net::WebsocketSession {
   }
 };
 
+static void run_test_server(uint16_t port) {
+  net::AsioExecutionContext pool;
+
+  net::WebsocketServer::Config config;
+  config.address = "0.0.0.0";
+  config.port = port;
+  config.dh_file = "assets/test-certificate/dh4096.pem";
+  config.certificate_chain_file = "assets/test-certificate/server.crt";
+  config.private_key_file = "assets/test-certificate/server.key";
+  config.session_factory = []() { return std::make_shared<SessionImpl>(); };
+
+  auto server = net::WebsocketServer{pool.io_context(), config};
+  auto ec = server.run();
+  if (ec) {
+    LOG_ERR("starting rpc server: {}", ec.message());
+  }
+
+  pool.run();
+  server.shutdown();
+  pool.io_context().run(); // use this thread for processing requests as well
+}
+
 CATCH_TEST_CASE("websockets-server", "[websockets-server]") {
 
   constexpr uint16_t k_port = 28081;
 
-  if (false) {
-    net::AsioExecutionContext pool;
-
-    net::WebsocketServer::Config config;
-    config.address = "0.0.0.0";
-    config.port = k_port;
-    config.dh_file = "assets/test-certificate/dh4096.pem";
-    config.certificate_chain_file = "assets/test-certificate/server.crt";
-    config.private_key_file = "assets/test-certificate/server.key";
-    config.session_factory = []() { return std::make_shared<SessionImpl>(); };
-
-    auto server = net::WebsocketServer{pool.io_context(), config};
-    auto ec = server.run();
-    if (ec) {
-      LOG_ERR("starting rpc server: {}", ec.message());
-    }
-
-    pool.run();
-    pool.io_context().run(); // use this thread for processing requests as well
-  }
+  run_test_server(k_port);
 
   CATCH_SECTION("websockets-server") {}
 }

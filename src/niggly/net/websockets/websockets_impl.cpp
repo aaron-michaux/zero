@@ -104,6 +104,7 @@ class Session : public std::enable_shared_from_this<Session> {
   beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
   beast::flat_buffer buffer_;
   std::chrono::milliseconds timeout_{30 * 1000};
+  std::function<void(Session*)> on_close_thunk_;
 
   asio::ip::tcp::resolver resolver_; //! client only
   std::string host_;                 //! client only
@@ -117,7 +118,10 @@ public:
   Session(asio::io_context& ioc, asio::ssl::context& ctx)
       : ws_{asio::make_strand(ioc), ctx}, resolver_{asio::make_strand(ioc)} {}
 
-  ~Session() {}
+  ~Session() {
+    if (on_close_thunk_)
+      on_close_thunk_(this);
+  }
 
   static std::shared_ptr<Session>
   make_server_side_session(uint64_t id, asio::ip::tcp::socket&& socket, asio::ssl::context& ctx,
@@ -163,6 +167,11 @@ public:
       else
         ptr->external_session_->on_error(WebsocketOperation::CLOSE, ec);
     });
+  }
+
+  void cancel_socket() {
+    asio::post(ws_.get_executor(),
+               [ptr = shared_from_this()]() { beast::get_lowest_layer(ptr->ws_).cancel(); });
   }
 
   void on_close() {
@@ -257,7 +266,9 @@ public:
 
   // @{ Server side functions
   // Get on the correct executor
-  void run_server_session() {
+  void run_server_session(std::function<void(Session*)> on_close_thunk) {
+    on_close_thunk_ = std::move(on_close_thunk); // deletes server-side resources
+
     // We need to be executing within a strand to perform async operations
     // on the I/O objects in this session. Although not strictly necessary
     // for single-threaded contexts, this example code is written to be
@@ -384,6 +395,13 @@ private:
   beast::error_code ec_;
   std::atomic<uint64_t> session_id_;
 
+  /**
+   * When a session destructs, a callback should delete from this session
+   */
+  std::mutex padlock_;
+  std::unordered_map<Session*, std::weak_ptr<Session>> sessions_;
+  bool is_shutdown_ = false;
+
 public:
   Listener(asio::io_context& ioc, asio::ssl::context& ctx, asio::ip::tcp::endpoint endpoint,
            std::shared_ptr<ServerCallbacks> callbacks)
@@ -417,6 +435,14 @@ public:
     return ec_;
   }
 
+  void shutdown() {
+    {
+      std::lock_guard lock{padlock_};
+      is_shutdown_ = true;
+    }
+    asio::post(acceptor_.get_executor(), [this]() { finish_shutdown_(); });
+  }
+
 private:
   void do_accept_() {
     // The new connection gets its own strand
@@ -429,13 +455,49 @@ private:
       INFO("rpc-server on-accept error: {}", ec.message());
     } else {
       // Create the session and run it
-      Session::make_server_side_session(session_id_.fetch_add(1, std::memory_order_acq_rel),
-                                        std::move(socket), ctx_, callbacks_)
-          ->run_server_session();
+      auto session = Session::make_server_side_session(
+          session_id_.fetch_add(1, std::memory_order_acq_rel), std::move(socket), ctx_, callbacks_);
+
+      bool is_shutdown = false;
+
+      {
+        std::lock_guard lock{padlock_};
+        is_shutdown = is_shutdown_;
+        if (!is_shutdown)
+          sessions_.insert({session.get(), session});
+      }
+
+      if (is_shutdown) {
+        session->cancel_socket();
+      } else {
+        session->run_server_session([this](Session* session) mutable { remove_session_(session); });
+      }
     }
 
     // Accept another connection
     do_accept_();
+  }
+
+  void remove_session_(Session* session) {
+    std::lock_guard lock{padlock_};
+    sessions_.erase(session);
+  }
+
+  void finish_shutdown_() {
+    acceptor_.cancel(); // stop listening
+
+    decltype(sessions_) sessions;
+    { // clean out the current sessions
+      std::lock_guard lock{padlock_};
+      using std::swap;
+      swap(sessions, sessions_);
+    }
+
+    for (auto& session : sessions) {
+      auto ptr = session.second.lock();
+      if (ptr)
+        ptr->cancel_socket();
+    }
   }
 };
 
@@ -516,6 +578,11 @@ std::error_code WebsocketServer::run() {
   if (pimpl_->listener == nullptr)
     return std::make_error_code(std::errc::not_connected);
   return pimpl_->listener->run();
+}
+
+void WebsocketServer::shutdown() {
+  TRACE("post shutdown");
+  pimpl_->listener->shutdown();
 }
 
 } // namespace niggly::net
