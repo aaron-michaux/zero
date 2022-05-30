@@ -138,7 +138,6 @@ public:
     } catch (...) {
       FATAL("callback `session_factory` must not throw");
     }
-    TRACE("server side session created, id={}", id);
     return session;
   }
 
@@ -452,14 +451,20 @@ private:
   }
 
   void on_accept_(beast::error_code ec, asio::ip::tcp::socket socket) {
+
+    bool is_shutdown = false;
+
     if (ec) {
       INFO("rpc-server on-accept error: {}", ec.message());
+      {
+        std::lock_guard lock{padlock_};
+        is_shutdown = is_shutdown_;
+      }
+
     } else {
       // Create the session and run it
       auto session = Session::make_server_side_session(
           session_id_.fetch_add(1, std::memory_order_acq_rel), std::move(socket), ctx_, callbacks_);
-
-      bool is_shutdown = false;
 
       {
         std::lock_guard lock{padlock_};
@@ -468,17 +473,14 @@ private:
           sessions_.insert({session.get(), session});
       }
 
-      if (is_shutdown) {
+      if (is_shutdown)
         session->cancel_socket();
-      } else {
+      else
         session->run_server_session([this](Session* session) mutable { remove_session_(session); });
-      }
     }
 
-    if (ec != boost::asio::error::operation_aborted) {
-      // Accept another connection
-      do_accept_();
-    }
+    if (!is_shutdown)
+      do_accept_(); // Accept another connection
   }
 
   void remove_session_(Session* session) {
@@ -488,7 +490,6 @@ private:
 
   void finish_shutdown_() {
     acceptor_.cancel(); // stop listening
-    TRACE("acceptor cancelled");
 
     decltype(sessions_) sessions;
     { // clean out the current sessions
@@ -584,9 +585,6 @@ std::error_code WebsocketServer::run() {
   return pimpl_->listener->run();
 }
 
-void WebsocketServer::shutdown() {
-  TRACE("post shutdown");
-  pimpl_->listener->shutdown();
-}
+void WebsocketServer::shutdown() { pimpl_->listener->shutdown(); }
 
 } // namespace niggly::net
