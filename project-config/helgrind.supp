@@ -1,8 +1,23 @@
 
-
+{
+   Niggly.ThreadPool: no lock on "notify one"
+   Helgrind:Misc
+   fun:pthread_cond_signal_WRK
+   fun:pthread_cond_signal@*
+   fun:_ZN6niggly5async6detail17NotificationQueue15increment_size*
+   ...
+}
 
 {
-   Asio: Unlocks before signalling condvar
+   Niggly.ThreadPool: blocking pop
+   Helgrind:Misc
+   ...
+   fun:_ZN6niggly5async6detail17NotificationQueue12blocking_pop*
+   ...
+}
+
+{
+   Asio: unlocks before signalling condvar
    Helgrind:Misc
    ...
    fun:pthread_cond_signal@*
@@ -11,7 +26,7 @@
 }
 
 {
-   Asio: Schedular do run one
+   Asio: schedular do run one
    Helgrind:Race
    fun:_ZN5boost4asio6detail*scheduler*
    ...
@@ -39,8 +54,10 @@
 }
 
 {
-   Beast: 1 
+   Beast: http detail functions
    Helgrind:Race
-   fun:_ZNK5boost5beast4http6detail*
+   fun:_ZN*5boost5beast4http6detail*
    ...
 }
+
+

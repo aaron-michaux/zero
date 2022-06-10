@@ -225,9 +225,11 @@ if [ "$TARGET_FILE" = "$TARGET_FILE0" ] ; then
     if [ "$VALGRIND" = "1" ] ; then        
         valgrind --demangle=yes --tool=memcheck --leak-check=full --track-origins=yes --verbose --log-file=valgrind.log --gen-suppressions=all --suppressions=project-config/valgrind.supp "$PRODUCT" "$@"
         RET=$?
+        cat valgrind.log | tail -n 1
     elif [ "$HELGRIND" = "1" ] ; then        
         valgrind --demangle=yes --tool=helgrind --verbose --log-file=helgrind.log --gen-suppressions=all --suppressions=project-config/helgrind.supp "$PRODUCT" "$@"
         RET=$?
+        cat helgrind.log | tail -n 1
     elif [ "$GDB" = "1" ] ; then        
         gdb -x project-config/gdbinit -silent -return-child-result -statistics --args "$PRODUCT" "$@"
         RET=$?

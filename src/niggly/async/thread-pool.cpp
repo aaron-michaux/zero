@@ -304,9 +304,8 @@ private:
 
   void increment_size_() {
     const auto old_size = size_.fetch_add(1, std::memory_order_acq_rel);
-    if (old_size <= n_queues_) {
-      // data_cv_.notify_one();
-    }
+    if (old_size <= n_queues_)
+      data_cv_.notify_one();
   }
 
   bool try_pop_(thunk_type& thunk) {
