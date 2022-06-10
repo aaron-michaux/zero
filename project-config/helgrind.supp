@@ -1,0 +1,46 @@
+
+
+
+{
+   Asio: Unlocks before signalling condvar
+   Helgrind:Misc
+   ...
+   fun:pthread_cond_signal@*
+   fun:*unlock_and_signal_one*
+   ...
+}
+
+{
+   Asio: Schedular do run one
+   Helgrind:Race
+   fun:_ZN5boost4asio6detail*scheduler*
+   ...
+}
+
+{
+   Asio: conditionally enabled mutex
+   Helgrind:Race
+   fun:_ZN5boost4asio6detail27conditionally_enabled_mutex*
+   ...
+}
+
+{
+   Asio: IoContext pop
+   Helgrind:Race
+   fun:_ZN5boost4asio6detail15op_queue_access4next*
+   ...
+}
+
+{
+   Asio: epoll reactor
+   Helgrind:Race
+   fun:_ZN5boost4asio6detail13epoll_reactor*
+   ...
+}
+
+{
+   Beast: 1 
+   Helgrind:Race
+   fun:_ZNK5boost5beast4http6detail*
+   ...
+}
