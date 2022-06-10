@@ -98,7 +98,7 @@ struct ServerCallbacks {
 // ----------------------------------------------------------------------------------------- Session
 
 class Session : public std::enable_shared_from_this<Session> {
-  const uint64_t id_{0};                                         //! server only
+  const uint64_t id_ = 0;                                        //! server only
   std::shared_ptr<ServerCallbacks> callbacks_;                   //! server only
   std::shared_ptr<WebsocketSession> external_session_ = nullptr; //! External facing session
   beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
@@ -106,9 +106,11 @@ class Session : public std::enable_shared_from_this<Session> {
   std::chrono::milliseconds timeout_{30 * 1000};
   std::function<void(Session*)> on_close_thunk_;
 
+  bool orderly_close_executed_ = false;
+
   asio::ip::tcp::resolver resolver_; //! client only
   std::string host_;                 //! client only
-  uint16_t port_{0};                 //! client only
+  uint16_t port_ = 0;                //! client only
 
 public:
   // Takes ownership of the socket -- for building server-side sessions
@@ -161,7 +163,7 @@ public:
         beast::websocket::close_code{close_code}, beast::string_view{reason.data(), reason.size()}};
 
     ws_.async_close(close_reason, [ptr = shared_from_this()](beast::error_code ec) {
-      if (ec == beast::websocket::error::closed)
+      if (!ec || ec == beast::websocket::error::closed)
         ptr->on_close();
       else
         ptr->external_session_->on_error(WebsocketOperation::CLOSE, ec);
@@ -176,6 +178,7 @@ public:
   void on_close() {
     uint16_t code = ws_.reason().code;
     auto reason = ws_.reason().reason;
+    orderly_close_executed_ = true;
     external_session_->on_close(code, std::string_view{reason.data(), reason.size()});
   }
 
@@ -339,6 +342,10 @@ public:
       return;
     }
 
+    if (orderly_close_executed_) {
+      return; // the close operation has already executed
+    }
+
     if (ec) {
       on_error(WebsocketOperation::READ, ec);
       return;
@@ -425,6 +432,8 @@ public:
     acceptor_.listen(asio::socket_base::max_listen_connections, ec_);
     if (ec_)
       return;
+
+    INFO("websocket-server listening on port {}", endpoint.port());
   }
 
   // Start accepting incoming connections

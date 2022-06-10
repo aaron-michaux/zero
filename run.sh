@@ -20,11 +20,13 @@ BUILD_EXAMPLES=0
 LTO=0
 UNITY_BUILD=0
 VALGRIND=0
+HELGRIND=0
 PYTHON_BINDINGS=0
 COVERAGE=0
 COVERAGE_HTML=0
 RULE=all
 CXXSTD=-std=c++2b
+LOG_LEVEL=""
 
 TARGET_FILE="$TARGET_FILE0"
 
@@ -38,7 +40,7 @@ show_usage()
       clang, clang-14, gcc, gcc-9, gcc-11 (default)
 
    Configuration options:
-      asan (default), usan, tsan, debug, release, valgrind, gdb, lldb
+      asan (default), usan, tsan, debug, release, reldbg, valgrind, helgrind gdb, lldb
       
       If gdb, lldb, or valgrind is selected, then builds debug and 
       runs under the tool.
@@ -88,10 +90,12 @@ while [ "$#" -gt "0" ] ; do
     [ "$1" = "usan" ]      && CONFIG=usan      && shift && continue
     [ "$1" = "tsan" ]      && CONFIG=tsan      && shift && continue
     [ "$1" = "debug" ]     && CONFIG=debug     && shift && continue
+    [ "$1" = "reldbg" ]    && CONFIG=reldbg    && shift && continue
+    [ "$1" = "release" ]   && CONFIG=release   && shift && continue
     [ "$1" = "valgrind" ]  && CONFIG=debug     && VALGRIND=1 && shift && continue
+    [ "$1" = "helgrind" ]  && CONFIG=debug     && HELGRIND=1 && shift && continue
     [ "$1" = "gdb" ]       && CONFIG=debug     && GDB=1 && shift && continue
     [ "$1" = "lldb" ]      && CONFIG=debug     && LLDB=1 && shift && continue
-    [ "$1" = "release" ]   && CONFIG=release   && shift && continue
     
     # Other options
     [ "$1" = "clean" ]     && RULE="clean"     && shift && continue
@@ -219,7 +223,10 @@ if [ "$TARGET_FILE" = "$TARGET_FILE0" ] ; then
 
     RET=0    
     if [ "$VALGRIND" = "1" ] ; then        
-        valgrind --tool=memcheck --leak-check=full --track-origins=yes --verbose --log-file=valgrind.log --gen-suppressions=all "$PRODUCT" "$@"
+        valgrind --demangle=yes --tool=memcheck --leak-check=full --track-origins=yes --verbose --log-file=valgrind.log --gen-suppressions=all --suppressions=project-config/valgrind.supp "$PRODUCT" "$@"
+        RET=$?
+    elif [ "$HELGRIND" = "1" ] ; then        
+        valgrind --demangle=yes --tool=helgrind --verbose --log-file=helgrind.log --gen-suppressions=all --suppressions=project-config/helgrind.supp "$PRODUCT" "$@"
         RET=$?
     elif [ "$GDB" = "1" ] ; then        
         gdb -x project-config/gdbinit -silent -return-child-result -statistics --args "$PRODUCT" "$@"

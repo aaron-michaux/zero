@@ -24,6 +24,22 @@ enum class WebsocketOperation : int {
   CLOSE      // The websocket stream is being closed
 };
 
+constexpr std::string_view str(WebsocketOperation op) {
+#define CASE(x)                                                                                    \
+  case WebsocketOperation::x:                                                                      \
+    return #x
+  switch (op) {
+    CASE(CONNECT);
+    CASE(HANDSHAKE);
+    CASE(ACCEPT);
+    CASE(READ);
+    CASE(WRITE);
+    CASE(CLOSE);
+  }
+#undef CASE
+  return "<unknown case>";
+}
+
 // -------------------------------------------------------------------------------- WebsocketSession
 
 /**

@@ -12,8 +12,7 @@
  *
  */
 
-namespace niggly
-{
+namespace niggly {
 /// @brief Type used by the `tick()` and `tock()` functions.
 using ticktock_type = std::chrono::time_point<std::chrono::steady_clock>;
 
@@ -32,11 +31,10 @@ inline ticktock_type tick() { return std::chrono::steady_clock::now(); }
  * @brief Returns the elapsed seconds -- as a `double` -- since `whence`.
  * @see niggly::tick() for an example.
  */
-inline double tock(const ticktock_type& whence)
-{
-   typedef std::chrono::duration<double, std::ratio<1, 1>> ss;
-   auto now = std::chrono::steady_clock::now();
-   return std::chrono::duration_cast<ss>(now - whence).count();
+inline double tock(const ticktock_type& whence) {
+  using ss = std::chrono::duration<double, std::ratio<1, 1>>;
+  auto now = std::chrono::steady_clock::now();
+  return std::chrono::duration_cast<ss>(now - whence).count();
 }
 
 // ------------------------------------------------------------------ time thunk
@@ -47,11 +45,10 @@ inline double tock(const ticktock_type& whence)
  *
  * @include time-thunk_ex.cpp
  */
-template<typename F> constexpr double time_thunk(F&& f)
-{
-   auto now = tick();
-   f();
-   return tock(now);
+template <typename F> constexpr double time_thunk(F&& f) {
+  auto now = tick();
+  f();
+  return tock(now);
 }
 
 } // namespace niggly

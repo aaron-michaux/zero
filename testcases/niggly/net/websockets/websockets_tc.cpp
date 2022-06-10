@@ -9,11 +9,12 @@
 namespace niggly::test {
 
 class SessionImpl : public net::WebsocketSession {
-  void on_connect() override { INFO("created a new connection"); }
+public:
+  void on_connect() override { INFO("server created a new connection"); }
 
   void on_receive(const void* data, std::size_t size) override {
     std::string_view s{static_cast<const char*>(data), size};
-    INFO("received: {}", s);
+    INFO("server received: {}", s);
     std::vector<char> buffer;
     buffer.resize(size);
     std::memcpy(buffer.data(), data, size);
@@ -21,11 +22,39 @@ class SessionImpl : public net::WebsocketSession {
   }
 
   void on_close(uint16_t code, std::string_view reason) override {
-    INFO("closing session, code={}, reason='{}'", code, reason);
+    INFO("server closing session, code={}, reason='{}'", code, reason);
   }
 
   void on_error(net::WebsocketOperation operation, std::error_code ec) override {
-    LOG_ERR("error on op={}: {}", int(operation), ec.message());
+    LOG_ERR("server error on op={}: {}", int(operation), ec.message());
+  }
+};
+
+class SessionClient : public net::WebsocketSession {
+private:
+  thunk_type on_close_thunk_;
+
+public:
+  SessionClient(thunk_type on_close_thunk) : on_close_thunk_{on_close_thunk} {}
+
+  void on_connect() override {
+    INFO("client connected");
+    send_message(net::make_send_buffer("Hello World!"));
+  }
+
+  void on_receive(const void* data, std::size_t size) override {
+    std::string_view s{static_cast<const char*>(data), size};
+    INFO("client received: {}", s);
+    close(0, "orderly shutdown");
+  }
+
+  void on_close(uint16_t code, std::string_view reason) override {
+    INFO("client closing session, code={}, reason='{}'", code, reason);
+    on_close_thunk_();
+  }
+
+  void on_error(net::WebsocketOperation operation, std::error_code ec) override {
+    LOG_ERR("error on op={}: {}", str(operation), ec.message());
   }
 };
 
@@ -47,7 +76,11 @@ static void run_test_server(uint16_t port) {
   }
 
   pool.run();
-  server.shutdown();
+
+  auto client = std::make_shared<SessionClient>([&server]() { server.shutdown(); });
+  connect(client, pool.io_context(), "localhost", port);
+
+  // server.shutdown();
   pool.io_context().run(); // use this thread for processing requests as well
 }
 
