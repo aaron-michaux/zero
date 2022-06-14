@@ -43,12 +43,16 @@ constexpr std::string_view str(WebsocketOperation op) {
 // -------------------------------------------------------------------------------- WebsocketSession
 
 /**
- * A session is a two-way connection between a client and server.
- * The client connects to the server (WebsocketServer), creating a new
- * WebsocketSession object, which serves at the external interface for sending
- * and receiving data.
+ * A `WebsocketSession` is a two-way connection between a client and server.
  *
- * @see WebsocketServer::Config for where to set the factory method.
+ * When a server receives a new connection, a `WebsocketSession` instance
+ * is created to manage two-way communication with the client -- i.e, sending and
+ * receiving.
+ *
+ * `WebsocketSession` can also be used to create a client connection to a websocket
+ * server, using the `connect` free function.
+ *
+ * @see WebsocketServer::Config for where to set the factory method on a websocket server.
  * @note It is important that instances of WebsocketSession are freed when `on_close`
  *       is called.
  */
@@ -113,6 +117,11 @@ public:
 
 /**
  * @brief Connect to an endpoint.
+ *
+ * @param session The instance that manages the client connections.
+ * @param io_context An asio context for executing logic.
+ * @param host Host to connect to.
+ * @param port Port to connect to.
  *
  * A copy `session` is stored internally by the websocket driver, and the instance will
  * stay alive at least until the socket is closed or errors.
