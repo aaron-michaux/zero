@@ -26,6 +26,7 @@ public:
       : size_{thread_pool_size == 0 ? std::thread::hardware_concurrency() : thread_pool_size} {
     pool_.reserve(thread_pool_size);
   }
+
   ~AsioExecutionContext() {
     for (auto& thread : pool_)
       thread.join();

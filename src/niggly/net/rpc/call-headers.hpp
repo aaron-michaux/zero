@@ -21,8 +21,15 @@ struct RequestEnvelopeHeader {
   std::size_t size{0};         //!< The amount of data
 };
 
+/**
+ * @return false iff there's an error encoding the data
+ */
 bool encode_request_header(BufferType& buffer, uint64_t request_id, uint32_t call_id,
                            uint32_t deadline_millis);
+
+/**
+ * @brief Decode the buffer `data`+`size` into `header`
+ */
 bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size);
 
 struct ResponseEnvelopeHeader {
@@ -38,6 +45,9 @@ struct ResponseEnvelopeHeader {
  */
 bool encode_response_header(BufferType& buffer, uint64_t request_id, const Status& status);
 
+/**
+ * @brief Decode the buffer `data`+`size` into `header`
+ */
 bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size);
 
 } // namespace niggly::net::detail
