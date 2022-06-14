@@ -1,9 +1,9 @@
 
 # These will be set from the outside
-TARGET?=hex
+TARGET?=zero
 SOURCES?=$(shell find src -type f -name '*.cpp' -o -name '*.c')
-TOOLCHAIN_NAME?=gcc-9
-TOOLCHAIN_CONFIG?=asan
+TOOLCHAIN_NAME?=gcc-11
+TOOLCHAIN_CONFIG?=release
 STATIC_LIBCPP?=0
 VERBOSE?=0
 LTO?=0
@@ -11,7 +11,7 @@ UNITY_BUILD?=0
 BUILD_TESTS?=0
 BUILD_EXAMPLES?=0
 BENCHMARK?=0
-CXXSTD?=-std=c++17
+CXXSTD?=-std=c++2b
 
 # -------------------------------------------------------------------------- Configure build options
 

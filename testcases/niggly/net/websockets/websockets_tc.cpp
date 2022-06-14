@@ -8,7 +8,9 @@
 
 namespace niggly::test {
 
-class SessionImpl : public net::WebsocketSession {
+// ----------------------------------------------------------------------------------- ServerSession
+
+class ServerSession : public net::WebsocketSession {
 public:
   void on_connect() override { INFO("server created a new connection"); }
 
@@ -29,6 +31,8 @@ public:
     LOG_ERR("server error on op={}: {}", int(operation), ec.message());
   }
 };
+
+// ---------------------------------------------------------------------------------- Session Client
 
 class SessionClient : public net::WebsocketSession {
 private:
@@ -58,6 +62,8 @@ public:
   }
 };
 
+// --------------------------------------------------------------------------------- run-test-server
+
 static void run_test_server(uint16_t port) {
   net::AsioExecutionContext pool{2};
 
@@ -67,7 +73,7 @@ static void run_test_server(uint16_t port) {
   config.dh_file = "assets/test-certificate/dh4096.pem";
   config.certificate_chain_file = "assets/test-certificate/server.crt";
   config.private_key_file = "assets/test-certificate/server.key";
-  config.session_factory = []() { return std::make_shared<SessionImpl>(); };
+  config.session_factory = []() { return std::make_shared<ServerSession>(); };
 
   auto server = net::WebsocketServer{pool.io_context(), config};
   auto ec = server.run();
@@ -80,12 +86,12 @@ static void run_test_server(uint16_t port) {
   auto client = std::make_shared<SessionClient>([&server]() { server.shutdown(); });
   connect(client, pool.io_context(), "localhost", port);
 
-  // server.shutdown();
   pool.io_context().run(); // use this thread for processing requests as well
 }
 
-CATCH_TEST_CASE("websockets-server", "[websockets-server]") {
+// ------------------------------------------------------------------------------- websockets-server
 
+CATCH_TEST_CASE("websockets-server", "[websockets-server]") {
   constexpr uint16_t k_port = 28081;
 
   run_test_server(k_port);
