@@ -46,18 +46,8 @@ public:
 
   /**
    * @brief The call-id... ie., which rpc function is being called, `do_this`, or `do_that`.
-   *
-   * The handler should match this id with the a specific function.
    */
   uint32_t call_id() const { return call_id_; }
-
-  /**
-   * @brief The unserialized raw bytes that are parameters for this call.
-   *
-   * The handler should -- safely -- deserialize this data into parameters for the
-   * function specified by `call_id()`.
-   */
-  std::pair<const void*, std::size_t> call_data() const { return {data_, data_size_}; }
 
   /**
    * @brief The deadline for the call.

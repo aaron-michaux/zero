@@ -50,8 +50,8 @@ void CallContext<Extecutor>::finish_call_locked_(Status status,
   BufferType buffer;
   buffer.reserve(512);
 
-  auto set_and_send_error = [this, &buffer](StatusCode status) {
-    Status status{};
+  auto set_and_send_error = [this, &buffer](StatusCode code) {
+    Status status{code};
     buffer.clear();
     detail::encode_response_header(buffer, request_id_, status);
     agent_->send_message(std::move(buffer));

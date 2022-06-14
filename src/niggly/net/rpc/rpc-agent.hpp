@@ -17,7 +17,7 @@ namespace niggly::net {
  * @brief An `RpcAgent` can serves and send RPC requests.
  */
 template <typename Executor>
-class RpcAgent : public WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
+class RpcAgent : private WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
 public:
   using ThunkType = std::function<void()>;
 
@@ -73,6 +73,7 @@ public:
   void perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
                         std::function<bool(BufferType&)> serializer, CompletionHandler completion);
 
+private:
   /**
    * @brief Safely close resources
    */
@@ -83,7 +84,6 @@ public:
    */
   void on_receive(const void* data, std::size_t size) override;
 
-private:
   void handle_request_(const void* data, std::size_t size);
   void handle_response_(const void* data, std::size_t size);
   void finish_response_(const detail::ResponseEnvelopeHeader& header);
