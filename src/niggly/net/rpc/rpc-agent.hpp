@@ -13,6 +13,9 @@
 
 namespace niggly::net {
 
+/**
+ * @brief An `RpcAgent` can serves and send RPC requests.
+ */
 template <typename Executor>
 class RpcAgent : public WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
 public:
@@ -20,12 +23,12 @@ public:
 
   /**
    * @brief Creates a thunk to handle a call represented by the passed `context` object
-   * NOTE: the handler must treat `data` and `size` like volatile memory.
+   * NOTE: The memory pointed to by `data` and `size` may (will) evaporate immediately,
+   *       and thus must be deserialized/copied before the thunk is returned.
    * NOTE: `context` holds a pointer back to this object.
    */
-  using CallHandler =
-      std::function<ThunkType(std::shared_ptr<CallContext<Executor>> context, uint32_t call_id,
-                              const void* data, std::size_t size)>;
+  using CallHandler = std::function<ThunkType(std::shared_ptr<CallContext<Executor>> context,
+                                              const void* data, std::size_t size)>;
   using CompletionHandler = std::function<void(Status status, const void* data, std::size_t size)>;
 
   using SteadyTimerFactory = std::function<boost::asio::steady_timer()>;
@@ -53,15 +56,15 @@ public:
   /**
    * @brief Set up a new agent for serving rpc calls.
    * @param executor The executor for handling incoming requests.
+   * @param handler The RPC call handler for incoming requests.
    * @param timer_factory Creates timers for managing request timeouts.
-   * @param handlers The RPC call handlers that are matched to incoming requests.
    */
   RpcAgent(Executor executor, CallHandler handler, SteadyTimerFactory timer_factory)
       : executor_{executor}, handler_{std::move(handler)}, timer_factory_{
                                                                std::move(timer_factory)} {}
 
   /**
-   * @brief A type-erased rpc call.
+   * @brief An rpc client sends a type-erased rpc call.
    * @param call_id The call to make.
    * @param deadline_millis Number of milliseconds to wait for a response.
    * @param serializer A thunk that serializes the request data.
@@ -69,6 +72,7 @@ public:
    */
   void perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
                         std::function<bool(BufferType&)> serializer, CompletionHandler completion);
+
   /**
    * @brief Safely close resources
    */
@@ -82,7 +86,7 @@ public:
 private:
   void handle_request_(const void* data, std::size_t size);
   void handle_response_(const void* data, std::size_t size);
-  void finish_reponse_(detail::ResponseEnvelopeHeader header);
+  void finish_response_(const detail::ResponseEnvelopeHeader& header);
 };
 
 } // namespace niggly::net

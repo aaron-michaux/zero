@@ -28,15 +28,36 @@ private:
   std::chrono::steady_clock::time_point deadline_;
   std::function<void(Status status)> completion_{};
   mutable std::mutex padlock_;
+  uint32_t call_id_{0};
   bool is_cancelled_{false};
   bool has_finished_{false};
 
   void finish_call_locked_(Status status, std::function<bool(BufferType&)> serializer);
 
 public:
-  CallContext(std::shared_ptr<RpcAgent<Executor>> agent, uint64_t request_id,
+  CallContext(std::shared_ptr<RpcAgent<Executor>> agent, uint64_t request_id, uint32_t call_id,
               std::chrono::steady_clock::time_point deadline)
-      : agent_{std::move(agent)}, request_id_{request_id}, deadline_{deadline} {}
+      : agent_{std::move(agent)}, request_id_{request_id}, deadline_{deadline}, call_id_{call_id} {}
+
+  /**
+   * @brief The request-id... may be useful for idempotent semantics
+   */
+  uint64_t request_id() const { return request_id_; }
+
+  /**
+   * @brief The call-id... ie., which rpc function is being called, `do_this`, or `do_that`.
+   *
+   * The handler should match this id with the a specific function.
+   */
+  uint32_t call_id() const { return call_id_; }
+
+  /**
+   * @brief The unserialized raw bytes that are parameters for this call.
+   *
+   * The handler should -- safely -- deserialize this data into parameters for the
+   * function specified by `call_id()`.
+   */
+  std::pair<const void*, std::size_t> call_data() const { return {data_, data_size_}; }
 
   /**
    * @brief The deadline for the call.

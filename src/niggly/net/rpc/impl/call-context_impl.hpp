@@ -26,6 +26,7 @@ template <typename Extecutor> bool CallContext<Extecutor>::has_finished() const 
 
 template <typename Extecutor>
 void CallContext<Extecutor>::set_completion(std::function<void(Status status)> thunk) {
+  std::lock_guard lock{padlock_};
   completion_ = std::move(thunk);
 }
 
@@ -49,7 +50,7 @@ void CallContext<Extecutor>::finish_call_locked_(Status status,
   BufferType buffer;
   buffer.reserve(512);
 
-  auto set_and_send_error = [this, &buffer](StatusCode code) {
+  auto set_and_send_error = [this, &buffer](StatusCode status) {
     Status status{};
     buffer.clear();
     detail::encode_response_header(buffer, request_id_, status);
@@ -59,7 +60,7 @@ void CallContext<Extecutor>::finish_call_locked_(Status status,
     }
   };
 
-  const auto deadline_exceeded = deadline_ < std::chrono::steady_clock::now();
+  const auto deadline_exceeded = (deadline_ < std::chrono::steady_clock::now());
   if (deadline_exceeded) {
     set_and_send_error(StatusCode::DEADLINE_EXCEEDED);
     return;

@@ -3,6 +3,8 @@
 
 namespace niggly::net {
 
+// -------------------------------------------------------------------------------- perform rpc call
+
 template <typename Executor>
 void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
                                           std::function<bool(BufferType&)> serializer,
@@ -21,6 +23,17 @@ void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_mi
     completion(Status{StatusCode::ABORTED}, nullptr, 0);
     return;
   }
+
+#ifndef NDEBUG
+  { // In debug builds, check that the header is not corrupted
+    detail::RequestEnvelopeHeader header;
+    assert(detail::decode(header, data, size));
+    assert(header.is_request);
+    assert(header.request_id == request_id);
+    assert(header.call_id == call_id);
+    assert(header.deadline_millis == deadline_millis);
+  }
+#endif
 
   RpcResponse response;
   response.completion = std::move(completion);
@@ -51,7 +64,11 @@ void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_mi
   send_message(std::move(buffer));
 }
 
+// ---------------------------------------------------------------------------------------- on close
+
 template <typename Executor> void RpcAgent<Executor>::on_close(std::error_code ec) {}
+
+// -------------------------------------------------------------------------------------- on receive
 
 template <typename Executor>
 void RpcAgent<Executor>::on_receive(const void* data, std::size_t size) {
@@ -67,6 +84,8 @@ void RpcAgent<Executor>::on_receive(const void* data, std::size_t size) {
     handle_response_(data, size);
   }
 }
+
+// --------------------------------------------------------------------------------- handle_request_
 
 template <typename Executor>
 void RpcAgent<Executor>::handle_request_(const void* data, std::size_t size) {
@@ -84,12 +103,14 @@ void RpcAgent<Executor>::handle_request_(const void* data, std::size_t size) {
                                               : std::chrono::steady_clock::time_point::max();
 
   // Create the call context
-  auto context =
-      std::make_shared<CallContext>(this->shared_from_this(), header.request_id, deadline);
+  auto context = std::make_shared<CallContext>(this->shared_from_this(), header.request_id,
+                                               header.call_id, deadline);
 
   // Execute the call
-  executor_.execute(handler_(std::move(context), header.call_id, header.data, header.size));
+  executor_.execute(handler_(std::move(context, header.data, header.size)));
 }
+
+// -------------------------------------------------------------------------------- handle_response_
 
 template <typename Executor>
 void RpcAgent<Executor>::handle_response_(const void* data, std::size_t size) {
@@ -97,11 +118,13 @@ void RpcAgent<Executor>::handle_response_(const void* data, std::size_t size) {
   if (!detail::decode(header, data, size)) {
     return; // Corrupt data
   }
-  finish_reponse_(std::move(header));
+  finish_response_(std::move(header));
 }
 
+// -------------------------------------------------------------------------------- finish_response_
+
 template <typename Executor>
-void RpcAgent<Executor>::finish_reponse_(detail::ResponseEnvelopeHeader header) {
+void RpcAgent<Executor>::finish_response_(const detail::ResponseEnvelopeHeader& header) {
   assert(!header.is_request);
 
   bool retreived = false;
