@@ -1,7 +1,7 @@
 
 #include "stdinc.hpp"
 
-#include "niggly/net/asio-execution-context.hpp"
+#include "niggly/portable/asio/asio-execution-context.hpp"
 #include "niggly/net/websockets/websocket-server.hpp"
 
 #include <catch2/catch.hpp>
@@ -65,7 +65,8 @@ public:
 // --------------------------------------------------------------------------------- run-test-server
 
 static void run_test_server(uint16_t port) {
-  net::AsioExecutionContext pool{2};
+  boost::asio::io_context io_context;
+  net::AsioExecutionContext pool{io_context, 2};
 
   net::WebsocketServer::Config config;
   config.address = "0.0.0.0";
@@ -75,7 +76,7 @@ static void run_test_server(uint16_t port) {
   config.private_key_file = "assets/test-certificate/server.key";
   config.session_factory = []() { return std::make_shared<ServerSession>(); };
 
-  auto server = net::WebsocketServer{pool.io_context(), config};
+  auto server = net::WebsocketServer{io_context, config};
   auto ec = server.run();
   if (ec) {
     LOG_ERR("starting rpc server: {}", ec.message());
@@ -84,9 +85,9 @@ static void run_test_server(uint16_t port) {
   pool.run();
 
   auto client = std::make_shared<SessionClient>([&server]() { server.shutdown(); });
-  connect(client, pool.io_context(), "localhost", port);
+  connect(client, io_context, "localhost", port);
 
-  pool.io_context().run(); // use this thread for processing requests as well
+  io_context.run(); // use this thread for processing requests as well
 }
 
 // ------------------------------------------------------------------------------- websockets-server

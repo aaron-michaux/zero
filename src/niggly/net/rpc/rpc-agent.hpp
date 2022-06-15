@@ -5,6 +5,7 @@
 #include "call-context.hpp"
 
 #include "niggly/net/buffer.hpp"
+#include "niggly/net/websockets/websocket-session.hpp"
 
 #include <boost/asio/steady_timer.hpp>
 
@@ -17,7 +18,7 @@ namespace niggly::net {
  * @brief An `RpcAgent` can serves and send RPC requests.
  */
 template <typename Executor>
-class RpcAgent : private WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
+class RpcAgent : public WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
 public:
   using ThunkType = std::function<void()>;
 

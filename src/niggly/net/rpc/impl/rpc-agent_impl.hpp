@@ -27,7 +27,7 @@ void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_mi
 #ifndef NDEBUG
   { // In debug builds, check that the header is not corrupted
     detail::RequestEnvelopeHeader header;
-    assert(detail::decode(header, data, size));
+    assert(detail::decode(header, buffer.data(), buffer.size()));
     assert(header.is_request);
     assert(header.request_id == request_id);
     assert(header.call_id == call_id);
@@ -106,8 +106,13 @@ void RpcAgent<Executor>::handle_request_(const void* data, std::size_t size) {
   auto context = std::make_shared<CallContext>(this->shared_from_this(), header.request_id,
                                                header.call_id, deadline);
 
-  // Execute the call
-  executor_.execute(handler_(std::move(context, header.data, header.size)));
+  if (!handler_) {
+    // The call handler hasn't been set up, so finish the call immediately
+    context->finish_call(Status{StatusCode::UNIMPLEMENTED});
+  } else {
+    // Execute the call
+    executor_.execute(handler_(std::move(context, header.data, header.size)));
+  }
 }
 
 // -------------------------------------------------------------------------------- handle_response_

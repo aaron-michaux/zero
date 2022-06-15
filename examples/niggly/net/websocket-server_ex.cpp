@@ -1,7 +1,7 @@
 
 #include "stdinc.hpp"
 
-#include "niggly/net/asio-execution-context.hpp"
+#include "niggly/portable/asio/asio-execution-context.hpp"
 #include "niggly/net/websockets/websocket-server.hpp"
 
 namespace niggly::example {
@@ -77,9 +77,10 @@ static void run_test_server() {
   };
 
   // An execution context for running server/client functions
-  net::AsioExecutionContext pool{2};
+  boost::asio::io_context io_context;
+  net::AsioExecutionContext pool{io_context, 2};
 
-  auto server = net::WebsocketServer{pool.io_context(), config};
+  auto server = net::WebsocketServer{io_context, config};
   auto ec = server.run();
   if (ec) {
     LOG_ERR("starting rpc server: {}", ec.message());
@@ -92,9 +93,9 @@ static void run_test_server() {
     // Tell `server` to shutdown when the client connection closes
     server.shutdown();
   });
-  connect(client, pool.io_context(), "localhost", port); // Connect to server
+  connect(client, io_context, "localhost", port); // Connect to server
 
-  pool.io_context().run(); // use this thread for processing requests as well
+  io_context.run(); // use this thread for processing requests as well
 }
 
 } // namespace niggly::example

@@ -1,8 +1,6 @@
 
 #pragma once
 
-//#include "execution-broker.hpp"
-
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 
@@ -13,17 +11,30 @@
 namespace niggly::net {
 
 /**
- * Type erase the underlying boost::asio::io_context
+ * @defgroup niggle-asio-beast Niggly Asio/Beast
+ *
+ * We use Asio for two things: an execution context, and managing timers.
+ * Beast is used to manage websockets. These three dependencies are not
+ * portable to WebAssembly.
+ *
+ * The type erasure
+ */
+
+/**
+ * @brief Type erase the underlying boost::asio::io_context
  */
 class AsioExecutionContext {
 private:
-  mutable boost::asio::io_context io_context_;
+  boost::asio::io_context& io_context_;
   std::size_t size_;
   std::vector<std::thread> pool_;
 
 public:
-  AsioExecutionContext(std::size_t thread_pool_size = 0)
-      : size_{thread_pool_size == 0 ? std::thread::hardware_concurrency() : thread_pool_size} {
+  using ExecutorType = boost::asio::io_context::executor_type;
+
+  AsioExecutionContext(boost::asio::io_context& io_context, std::size_t thread_pool_size = 0)
+      : io_context_{io_context}, size_{thread_pool_size == 0 ? std::thread::hardware_concurrency()
+                                                             : thread_pool_size} {
     pool_.reserve(thread_pool_size);
   }
 
@@ -46,10 +57,10 @@ public:
   std::size_t size() const noexcept { return size_; }
 
   /** @brief Return the executor for running jobs on the server pool */
-  auto get_executor() const { return io_context_.get_executor(); }
+  ExecutorType get_executor() const { return io_context_.get_executor(); }
 
   /** @brief Direct access to the underlying io_context */
-  boost::asio::io_context& io_context() { return io_context_; }
+  // boost::asio::io_context& io_context() { return io_context_; }
 };
 
 } // namespace niggly::net
