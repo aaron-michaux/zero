@@ -5,6 +5,20 @@
 
 This repo is a playground where I teach myself new stuff about C++.
 
+### Dependencies
+
+ * https://github.com/axboe/liburing
+ * https://github.com/facebookexperimental/libunifex.git
+ 
+ ```
+ git clone https://github.com/facebookexperimental/libunifex.git
+ cd libunifex
+ cmake -H. -Bbuild -DCMAKE_CXX_STANDARD:STRING=20 -DCMAKE_INSTALL_PREFIX=/usr/local
+ cd build
+ make -j
+ sudo make install
+ ```
+
 ### Building
 
 Since this is a personal project, it very much is "works for me". I use Ubuntu and MacOS.

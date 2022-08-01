@@ -25,9 +25,14 @@
 namespace niggly {
 
 template <typename ExecutionContext, typename SteadyTimer> class Platform {
-  ExecutionContext execution_context;
+private:
+  struct Pimpl;
+  std::unique_ptr<Pimpl> pimpl_;
 
-  SteadyTimer make_steady_timer();
+public:
+  Platform();
+  // ExecutionContext& execution_context();
+  // SteadyTimer make_steady_timer();
 };
 
 using AsioPlatform = Platform<net::AsioExecutionContext, boost::asio::steady_timer>;
