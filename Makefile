@@ -37,7 +37,7 @@ WARNINGS:=-Wno-variadic-macros
 
 # Configure includes
 INCDIRS:=-Isrc -isystemcontrib/include -isystem/usr/local/include
-LDFLAGS+=-lpthread -lssl -lcrypto
+LDFLAGS+=-lunifex -lpthread -lssl -lcrypto
 CFLAGS+= $(INCDIRS) $(DEFINES)
 CXXFLAGS+= -DFMT_HEADER_ONLY $(INCDIRS) $(DEFINES) $(WARNINGS)
 

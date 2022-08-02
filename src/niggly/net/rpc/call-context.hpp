@@ -13,7 +13,7 @@
 
 namespace niggly::net {
 
-template <typename Executor> class RpcAgent;
+template <typename Executor, typename SteadyTimerType> class RpcAgent;
 
 /**
  * @brief Context for a single active RPC call.
@@ -21,9 +21,9 @@ template <typename Executor> class RpcAgent;
  * This context exists on the server side of the RPC call, while it is being executed. There is no
  * equivalent client side context object.
  */
-template <typename Executor> class CallContext {
+template <typename Executor, typename SteadyTimerType> class CallContext {
 private:
-  std::shared_ptr<RpcAgent<Executor>> agent_;
+  std::shared_ptr<RpcAgent<Executor, SteadyTimerType>> agent_;
   uint64_t request_id_{0};
   std::chrono::steady_clock::time_point deadline_;
   std::function<void(Status status)> completion_{};
@@ -35,8 +35,8 @@ private:
   void finish_call_locked_(Status status, std::function<bool(BufferType&)> serializer);
 
 public:
-  CallContext(std::shared_ptr<RpcAgent<Executor>> agent, uint64_t request_id, uint32_t call_id,
-              std::chrono::steady_clock::time_point deadline)
+  CallContext(std::shared_ptr<RpcAgent<Executor, SteadyTimerType>> agent, uint64_t request_id,
+              uint32_t call_id, std::chrono::steady_clock::time_point deadline)
       : agent_{std::move(agent)}, request_id_{request_id}, deadline_{deadline}, call_id_{call_id} {}
 
   /**

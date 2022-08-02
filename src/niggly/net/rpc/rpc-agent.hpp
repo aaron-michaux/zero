@@ -7,7 +7,7 @@
 #include "niggly/net/buffer.hpp"
 #include "niggly/net/websockets/websocket-session.hpp"
 
-#include <boost/asio/steady_timer.hpp>
+//#include <boost/asio/steady_timer.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -15,10 +15,11 @@
 namespace niggly::net {
 
 /**
- * @brief An `RpcAgent` can serves and send RPC requests.
+ * @brief An `RpcAgent` can serve and send RPC requests.
  */
-template <typename Executor>
-class RpcAgent : public WebsocketSession, public std::enable_shared_from_this<RpcAgent<Executor>> {
+template <typename Executor, typename SteadyTimerType>
+class RpcAgent : public WebsocketSession,
+                 public std::enable_shared_from_this<RpcAgent<Executor, SteadyTimerType>> {
 public:
   using ThunkType = std::function<void()>;
 
@@ -28,11 +29,12 @@ public:
    *       and thus must be deserialized/copied before the thunk is returned.
    * NOTE: `context` holds a pointer back to this object.
    */
-  using CallHandler = std::function<ThunkType(std::shared_ptr<CallContext<Executor>> context,
-                                              const void* data, std::size_t size)>;
+  using CallHandler =
+      std::function<ThunkType(std::shared_ptr<CallContext<Executor, SteadyTimerType>> context,
+                              const void* data, std::size_t size)>;
   using CompletionHandler = std::function<void(Status status, const void* data, std::size_t size)>;
 
-  using SteadyTimerFactory = std::function<boost::asio::steady_timer()>;
+  using SteadyTimerFactory = std::function<SteadyTimerType()>;
 
 private:
   Executor executor_;

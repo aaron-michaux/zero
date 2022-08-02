@@ -5,10 +5,10 @@ namespace niggly::net {
 
 // -------------------------------------------------------------------------------- perform rpc call
 
-template <typename Executor>
-void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_millis,
-                                          std::function<bool(BufferType&)> serializer,
-                                          CompletionHandler completion) {
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::perform_rpc_call(
+    uint32_t call_id, uint32_t deadline_millis, std::function<bool(BufferType&)> serializer,
+    CompletionHandler completion) {
   BufferType buffer;
   const auto request_id = next_request_id_.fetch_add(1, std::memory_order_acq_rel);
 
@@ -66,12 +66,13 @@ void RpcAgent<Executor>::perform_rpc_call(uint32_t call_id, uint32_t deadline_mi
 
 // ---------------------------------------------------------------------------------------- on close
 
-template <typename Executor> void RpcAgent<Executor>::on_close(std::error_code ec) {}
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::on_close(std::error_code ec) {}
 
 // -------------------------------------------------------------------------------------- on receive
 
-template <typename Executor>
-void RpcAgent<Executor>::on_receive(const void* data, std::size_t size) {
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::on_receive(const void* data, std::size_t size) {
   if (size == 0) {
     return; // There's no header: corrupt data
   }
@@ -87,8 +88,8 @@ void RpcAgent<Executor>::on_receive(const void* data, std::size_t size) {
 
 // --------------------------------------------------------------------------------- handle_request_
 
-template <typename Executor>
-void RpcAgent<Executor>::handle_request_(const void* data, std::size_t size) {
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::handle_request_(const void* data, std::size_t size) {
   detail::RequestEnvelopeHeader header;
 
   if (!detail::decode(header, data, size)) {
@@ -117,8 +118,8 @@ void RpcAgent<Executor>::handle_request_(const void* data, std::size_t size) {
 
 // -------------------------------------------------------------------------------- handle_response_
 
-template <typename Executor>
-void RpcAgent<Executor>::handle_response_(const void* data, std::size_t size) {
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::handle_response_(const void* data, std::size_t size) {
   detail::ResponseEnvelopeHeader header;
   if (!detail::decode(header, data, size)) {
     return; // Corrupt data
@@ -128,8 +129,9 @@ void RpcAgent<Executor>::handle_response_(const void* data, std::size_t size) {
 
 // -------------------------------------------------------------------------------- finish_response_
 
-template <typename Executor>
-void RpcAgent<Executor>::finish_response_(const detail::ResponseEnvelopeHeader& header) {
+template <typename Executor, typename SteadyTimerType>
+void RpcAgent<Executor, SteadyTimerType>::finish_response_(
+    const detail::ResponseEnvelopeHeader& header) {
   assert(!header.is_request);
 
   bool retreived = false;

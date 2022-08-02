@@ -3,5 +3,6 @@ default.profraw
 default.prof
 valgrind.log
 helgrind.log
+test.txt
 \#*
 

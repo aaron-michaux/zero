@@ -28,7 +28,7 @@ public:
 
     /**
      * @brief A callback for associating logic with an underlying websocket session.
-     * @note Must be set.
+     * @note Must be non-null.
      */
     std::function<std::shared_ptr<WebsocketSession>()> session_factory;
   };

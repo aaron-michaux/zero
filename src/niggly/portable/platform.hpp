@@ -30,6 +30,9 @@ private:
   std::unique_ptr<Pimpl> pimpl_;
 
 public:
+  using SteadyTimerType = SteadyTimer;
+  using ExecutionContextText = ExecutionContext;
+
   Platform();
   // ExecutionContext& execution_context();
   // SteadyTimer make_steady_timer();

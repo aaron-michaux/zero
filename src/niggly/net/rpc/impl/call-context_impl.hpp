@@ -3,45 +3,49 @@
 
 namespace niggly::net {
 
-template <typename Extecutor>
-std::chrono::steady_clock::time_point CallContext<Extecutor>::deadline() const {
+template <typename Extecutor, typename SteadyTimerType>
+std::chrono::steady_clock::time_point CallContext<Extecutor, SteadyTimerType>::deadline() const {
   return deadline_;
 }
 
-template <typename Extecutor> void CallContext<Extecutor>::cancel() {
+template <typename Extecutor, typename SteadyTimerType>
+void CallContext<Extecutor, SteadyTimerType>::cancel() {
   std::lock_guard lock{padlock_};
   is_cancelled_ = true;
   finish_call_locked_({StatusCode::CANCELLED}, nullptr);
 }
 
-template <typename Extecutor> bool CallContext<Extecutor>::is_cancelled() const {
+template <typename Extecutor, typename SteadyTimerType>
+bool CallContext<Extecutor, SteadyTimerType>::is_cancelled() const {
   std::lock_guard lock{padlock_};
   return is_cancelled_;
 }
 
-template <typename Extecutor> bool CallContext<Extecutor>::has_finished() const {
+template <typename Extecutor, typename SteadyTimerType>
+bool CallContext<Extecutor, SteadyTimerType>::has_finished() const {
   std::lock_guard lock{padlock_};
   return has_finished_;
 }
 
-template <typename Extecutor>
-void CallContext<Extecutor>::set_completion(std::function<void(Status status)> thunk) {
+template <typename Extecutor, typename SteadyTimerType>
+void CallContext<Extecutor, SteadyTimerType>::set_completion(
+    std::function<void(Status status)> thunk) {
   std::lock_guard lock{padlock_};
   completion_ = std::move(thunk);
 }
 
-template <typename Extecutor>
-void CallContext<Extecutor>::finish_call(Status status,
-                                         std::function<bool(BufferType&)> serializer) {
+template <typename Extecutor, typename SteadyTimerType>
+void CallContext<Extecutor, SteadyTimerType>::finish_call(
+    Status status, std::function<bool(BufferType&)> serializer) {
   std::lock_guard lock{padlock_};
   finish_call_locked_(std::move(status), std::move(serializer));
 }
 
 // ----------------------------------------------------------------------------- finish_call_locked_
 
-template <typename Extecutor>
-void CallContext<Extecutor>::finish_call_locked_(Status status,
-                                                 std::function<bool(BufferType&)> serializer) {
+template <typename Extecutor, typename SteadyTimerType>
+void CallContext<Extecutor, SteadyTimerType>::finish_call_locked_(
+    Status status, std::function<bool(BufferType&)> serializer) {
   // Check if this has already been done
   if (has_finished_)
     return;
