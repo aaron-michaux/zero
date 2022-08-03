@@ -8,7 +8,7 @@ PPWD="$(cd "$(dirname "$0")"; pwd)"
 
 CONFIG=asan
 TARGET_FILE0=zero
-TOOLCHAIN=gcc-11
+TOOLCHAIN=gcc-12
 FEEDBACK=0
 NO_BUILD=0
 GDB=0
@@ -37,7 +37,7 @@ show_usage()
    $(basename $0) [OPTIONS...]* [-- other arguments]?
 
    Compiler options:
-      clang, clang-14, gcc, gcc-9, gcc-11 (default)
+      clang, clang-14, gcc, gcc-9, gcc-11, gcc-12 (default)
 
    Configuration options:
       asan (default), usan, tsan, debug, release, reldbg, valgrind, helgrind gdb, lldb
@@ -81,9 +81,10 @@ while [ "$#" -gt "0" ] ; do
     # Compiler
     [ "$1" = "clang" ]     && TOOLCHAIN="clang-14" && shift && continue
     [ "$1" = "clang-14" ]  && TOOLCHAIN="clang-14" && shift && continue
-    [ "$1" = "gcc" ]       && TOOLCHAIN="gcc-11"  && shift && continue
+    [ "$1" = "gcc" ]       && TOOLCHAIN="gcc-12"  && shift && continue
     [ "$1" = "gcc-9" ]     && TOOLCHAIN="gcc-9"  && shift && continue
     [ "$1" = "gcc-11" ]    && TOOLCHAIN="gcc-11" && shift && continue
+    [ "$1" = "gcc-12" ]    && TOOLCHAIN="gcc-12" && shift && continue
 
     # Configuration
     [ "$1" = "asan" ]      && CONFIG=asan      && shift && continue

@@ -7,7 +7,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace niggly::test {
+namespace niggly::net::test {
 
 // // The websocket server
 // // RpcAgent instances
@@ -31,4 +31,4 @@ namespace niggly::test {
 //                                           std::string_view host, uint16_t post,
 //                                           thunk_type completion = nullptr);
 // };
-} // namespace niggly::test
+} // namespace niggly::net::test

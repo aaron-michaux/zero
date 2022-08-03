@@ -40,4 +40,7 @@ public:
 
 using AsioPlatform = Platform<net::AsioExecutionContext, boost::asio::steady_timer>;
 
+AsioPlatform make_asio_platform(boost::asio::io_context& io_context,
+                                std::size_t thread_pool_size = 0);
+
 } // namespace niggly
