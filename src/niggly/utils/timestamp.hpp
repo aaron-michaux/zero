@@ -31,7 +31,7 @@ public:
   using value_type = int64_t;
 
 private:
-  using system_clock_time_point = decltype(std::chrono::system_clock::now());
+  using system_clock_time_point = std::chrono::system_clock::time_point;
 
   static constexpr value_type M = 1000000;
   value_type x_{0};
@@ -45,6 +45,10 @@ public:
     set(y, m, d, hour, min, sec, micros);
   }
   constexpr explicit Timestamp(value_type x) { x_ = x; }
+  constexpr explicit Timestamp(std::chrono::system_clock::time_point whence)
+      : x_{value_type(
+            std::chrono::duration_cast<std::chrono::microseconds>(whence.time_since_epoch())
+                .count())} {}
   constexpr Timestamp(const Timestamp&) = default;
   constexpr Timestamp(Timestamp&&) noexcept = default;
   constexpr ~Timestamp() = default;
@@ -298,6 +302,10 @@ public:
   }
 
   constexpr value_type value() const { return x_; }
+
+  constexpr std::chrono::system_clock::time_point time_point() const {
+    return std::chrono::system_clock::time_point{std::chrono::microseconds{x_}};
+  }
   ///@}
 
   ///@{ @name Setters

@@ -88,7 +88,11 @@ void CallContext<Extecutor, SteadyTimerType>::finish_call_locked_(
 
 template <typename Extecutor, typename SteadyTimerType>
 string CallContext<Extecutor, SteadyTimerType>::to_string() const {
-  return format("hello");
+  const std::chrono::system_clock::time_point deadline =
+      std::chrono::system_clock::now() + (deadline_ - std::chrono::steady_clock::now());
+  return format("CallContext(id={}, call-id={}, is-cancelled={}, has-finished={}, deadline={})",
+                request_id_, call_id_, is_cancelled_, has_finished_,
+                Timestamp{deadline}.to_string());
 }
 
 } // namespace niggly::net
