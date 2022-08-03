@@ -3,21 +3,18 @@
 #include "stdinc.hpp"
 
 #include "niggly/portable/asio/asio-execution-context.hpp"
+#include "niggly/net/websockets/websocket-server.hpp"
 #include "niggly/net/rpc/rpc-agent.hpp"
 
 #include <catch2/catch.hpp>
 
 namespace niggly::net::test {
 
-/*
 class RpcEchoServer : public net::RpcAgent<AsioExecutionContext::ExecutorType,
                                            AsioExecutionContext::SteadyTimerType> {
 public:
-  static std::function<void()>
-  call_handler(std::shared_ptr<net::RpcAgent::CallContextType> context, // Rpc call context
-               const void* data, // Rpc call payload, raw bytes
-               std::size_t size) // Size of rpc call payload
-  {
+  static std::function<void()> call_handler(std::shared_ptr<CallContextType> context,
+                                            std::span<const std::byte> payload) {
     CATCH_REQUIRE(context);
     INFO("Serving RPC request: {}", context->to_string());
     return []() {};
@@ -54,12 +51,11 @@ static void run_test_rpc_echo_server(uint16_t port) {
 
   pool.run();
 
-  auto client = std::make_shared<SessionClient>([&server]() { server.shutdown(); });
-  connect(client, io_context, "localhost", port);
+  // auto client = std::make_shared<SessionClient>([&server]() { server.shutdown(); });
+  // connect(client, io_context, "localhost", port);
 
   io_context.run(); // use this thread for processing requests as well
 }
-*/
 
 CATCH_TEST_CASE("rpc-echo-server", "[rpc-echo-server]") {
 

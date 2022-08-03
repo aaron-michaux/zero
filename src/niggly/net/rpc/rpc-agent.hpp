@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 namespace niggly::net {
 
@@ -32,8 +33,8 @@ public:
    * NOTE: `context` holds a pointer back to this object.
    */
   using CallHandler = std::function<ThunkType(std::shared_ptr<CallContextType> context,
-                                              const void* data, std::size_t size)>;
-  using CompletionHandler = std::function<void(Status status, const void* data, std::size_t size)>;
+                                              std::span<const std::byte> payload)>;
+  using CompletionHandler = std::function<void(Status status, std::span<const std::byte> payload)>;
 
   using SteadyTimerFactory = std::function<SteadyTimerType()>;
 
@@ -45,8 +46,8 @@ private:
   std::atomic<uint64_t> next_request_id_{1};
 
   struct RpcResponse {
-    CompletionHandler completion_handler;
-    boost::asio::steady_timer timeout;
+    CompletionHandler completion;
+    std::optional<SteadyTimerType> timeout;
   };
 
   // NOTE: in theory we could use a memory address as the call-id,
@@ -86,10 +87,10 @@ private:
   /**
    * @brief Method that receives calls from a server agent.
    */
-  void on_receive(const void* data, std::size_t size) override;
+  void on_receive(std::span<const std::byte> payload) override;
 
-  void handle_request_(const void* data, std::size_t size);
-  void handle_response_(const void* data, std::size_t size);
+  void handle_request_(std::span<const std::byte> payload);
+  void handle_response_(std::span<const std::byte> payload);
   void finish_response_(const detail::ResponseEnvelopeHeader& header);
 };
 

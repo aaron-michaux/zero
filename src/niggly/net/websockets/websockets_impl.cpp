@@ -351,7 +351,7 @@ public:
       return;
     }
 
-    const std::byte* data = static_cast<std::byte*>(buffer_.data().data());
+    const std::byte* data = static_cast<const std::byte*>(buffer_.data().data());
     std::size_t size = buffer_.data().size();
     try {
       external_session_->on_receive(std::span<const std::byte>{data, size});

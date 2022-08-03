@@ -71,9 +71,9 @@ bool encode_request_header(BufferType& buffer, uint64_t request_id, uint32_t cal
   return true;
 }
 
-bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = static_cast<const std::byte*>(data);
-  auto remaining = size;
+bool decode(RequestEnvelopeHeader& header, std::span<const std::byte> payload) {
+  auto ptr = payload.data();
+  auto remaining = payload.size();
 
   int8_t is_request = 0;
   if (!decode_integer(ptr, remaining, is_request) ||           // If any decode
@@ -83,8 +83,7 @@ bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
     return false;                                              // return false
 
   header.is_request = (is_request != 0);
-  header.data = ptr;
-  header.size = remaining;
+  header.payload = std::span<const std::byte>{ptr, ptr + remaining};
   return true;
 }
 
@@ -113,9 +112,9 @@ bool encode_response_header(BufferType& buffer, uint64_t request_id, const Statu
   return true;
 }
 
-bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = static_cast<const std::byte*>(data);
-  auto remaining = size;
+bool decode(ResponseEnvelopeHeader& header, std::span<const std::byte> payload) {
+  auto ptr = payload.data();
+  auto remaining = payload.size();
 
   int8_t is_request = 0;
   int8_t error_code = 0;
@@ -135,8 +134,7 @@ bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size) 
 
   header.status =
       Status{StatusCode(error_code), std::move(error_message), std::move(error_details)};
-  header.data = ptr;
-  header.size = remaining;
+  header.payload = std::span<const std::byte>{ptr, ptr + remaining};
   return true;
 }
 

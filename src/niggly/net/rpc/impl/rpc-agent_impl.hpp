@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <boost/asio.hpp>
+
 namespace niggly::net {
 
 // -------------------------------------------------------------------------------- perform rpc call
@@ -14,20 +16,21 @@ void RpcAgent<Executor, SteadyTimerType>::perform_rpc_call(
 
   // Serialize the response header
   if (!detail::encode_request_header(buffer, request_id, call_id, deadline_millis)) {
-    completion(Status{StatusCode::ABORTED}, nullptr, 0);
+    completion(Status{StatusCode::ABORTED}, {});
     return;
   }
 
   // Serialize the response parameters
   if (serializer && !serializer(buffer)) {
-    completion(Status{StatusCode::ABORTED}, nullptr, 0);
+    completion(Status{StatusCode::ABORTED}, {});
     return;
   }
 
 #ifndef NDEBUG
   { // In debug builds, check that the header is not corrupted
     detail::RequestEnvelopeHeader header;
-    assert(detail::decode(header, buffer.data(), buffer.size()));
+    assert(detail::decode(
+        header, std::span<const std::byte>{buffer.data(), buffer.data() + buffer.size()}));
     assert(header.is_request);
     assert(header.request_id == request_id);
     assert(header.call_id == call_id);
@@ -72,27 +75,27 @@ void RpcAgent<Executor, SteadyTimerType>::on_close(uint16_t code_code, std::stri
 // -------------------------------------------------------------------------------------- on receive
 
 template <typename Executor, typename SteadyTimerType>
-void RpcAgent<Executor, SteadyTimerType>::on_receive(const void* data, std::size_t size) {
-  if (size == 0) {
+void RpcAgent<Executor, SteadyTimerType>::on_receive(std::span<const std::byte> payload) {
+  if (payload.size() == 0) {
     return; // There's no header: corrupt data
   }
 
-  const bool is_request = static_cast<const char*>(data)[0] != 0;
+  const bool is_request = std::to_integer<int8_t>(payload.data()[0]) != 0;
 
   if (is_request) { // Receiving a request is the server side of an RPC call
-    handle_request_(data, size);
+    handle_request_(payload);
   } else { // Receiving a response is the end part of the client side of an RPC call
-    handle_response_(data, size);
+    handle_response_(payload);
   }
 }
 
 // --------------------------------------------------------------------------------- handle_request_
 
 template <typename Executor, typename SteadyTimerType>
-void RpcAgent<Executor, SteadyTimerType>::handle_request_(const void* data, std::size_t size) {
+void RpcAgent<Executor, SteadyTimerType>::handle_request_(std::span<const std::byte> payload) {
   detail::RequestEnvelopeHeader header;
 
-  if (!detail::decode(header, data, size)) {
+  if (!detail::decode(header, payload)) {
     return; // Corrupt data
   }
 
@@ -104,24 +107,24 @@ void RpcAgent<Executor, SteadyTimerType>::handle_request_(const void* data, std:
                                               : std::chrono::steady_clock::time_point::max();
 
   // Create the call context
-  auto context = std::make_shared<CallContext>(this->shared_from_this(), header.request_id,
-                                               header.call_id, deadline);
+  auto context = std::make_shared<CallContextType>(this->shared_from_this(), header.request_id,
+                                                   header.call_id, deadline);
 
   if (!handler_) {
     // The call handler hasn't been set up, so finish the call immediately
     context->finish_call(Status{StatusCode::UNIMPLEMENTED});
   } else {
     // Execute the call
-    executor_.execute(handler_(std::move(context, header.data, header.size)));
+    executor_.dispatch(handler_(std::move(context), header.payload), std::allocator<int>{});
   }
 }
 
 // -------------------------------------------------------------------------------- handle_response_
 
 template <typename Executor, typename SteadyTimerType>
-void RpcAgent<Executor, SteadyTimerType>::handle_response_(const void* data, std::size_t size) {
+void RpcAgent<Executor, SteadyTimerType>::handle_response_(std::span<const std::byte> payload) {
   detail::ResponseEnvelopeHeader header;
-  if (!detail::decode(header, data, size)) {
+  if (!detail::decode(header, payload)) {
     return; // Corrupt data
   }
   finish_response_(std::move(header));
@@ -146,10 +149,11 @@ void RpcAgent<Executor, SteadyTimerType>::finish_response_(
     }
   }
 
-  if (retreived) {           // If the rpc-reponse has not yet been handled
-    response.timer.cancel(); // cancel any timeout
-    if (response.completion) // and if there's a completion
-      response.completion(std::move(header.status), header.data, header.size); // run it
+  if (retreived) {                // If the rpc-reponse has not yet been handled
+    if (response.timeout)         // check if there's a timer
+      response.timeout->cancel(); // and cancel it
+    if (response.completion)      // and if there's a completion
+      response.completion(std::move(header.status), header.payload); // run it
   }
 }
 

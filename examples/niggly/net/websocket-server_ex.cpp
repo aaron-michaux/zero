@@ -16,10 +16,6 @@ public:
     std::string_view s{reinterpret_cast<const char*>(payload.data()), payload.size()};
     INFO("server received: {}", s);
     send_message(net::make_send_buffer(payload));
-    // std::vector<char> buffer;
-    // buffer.resize(payload.size());
-    // std::memcpy(buffer.data(), payload.data(), payload.size());
-    // send_message(std::move(buffer));
   }
 
   void on_close(uint16_t code, std::string_view reason) override {
