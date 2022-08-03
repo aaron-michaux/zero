@@ -67,7 +67,7 @@ void RpcAgent<Executor, SteadyTimerType>::perform_rpc_call(
 // ---------------------------------------------------------------------------------------- on close
 
 template <typename Executor, typename SteadyTimerType>
-void RpcAgent<Executor, SteadyTimerType>::on_close(std::error_code ec) {}
+void RpcAgent<Executor, SteadyTimerType>::on_close(uint16_t code_code, std::string_view reason) {}
 
 // -------------------------------------------------------------------------------------- on receive
 

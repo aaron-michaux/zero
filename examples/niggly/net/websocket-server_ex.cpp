@@ -12,13 +12,14 @@ class ServerSession : public net::WebsocketSession {
 public:
   void on_connect() override { INFO("server created a new connection"); }
 
-  void on_receive(const void* data, std::size_t size) override {
-    std::string_view s{static_cast<const char*>(data), size};
+  void on_receive(std::span<const std::byte> payload) override {
+    std::string_view s{reinterpret_cast<const char*>(payload.data()), payload.size()};
     INFO("server received: {}", s);
-    std::vector<char> buffer;
-    buffer.resize(size);
-    std::memcpy(buffer.data(), data, size);
-    send_message(std::move(buffer));
+    send_message(net::make_send_buffer(payload));
+    // std::vector<char> buffer;
+    // buffer.resize(payload.size());
+    // std::memcpy(buffer.data(), payload.data(), payload.size());
+    // send_message(std::move(buffer));
   }
 
   void on_close(uint16_t code, std::string_view reason) override {
@@ -44,8 +45,8 @@ public:
     send_message(net::make_send_buffer("Hello World!"));
   }
 
-  void on_receive(const void* data, std::size_t size) override {
-    std::string_view s{static_cast<const char*>(data), size};
+  void on_receive(std::span<const std::byte> payload) override {
+    std::string_view s{reinterpret_cast<const char*>(payload.data()), payload.size()};
     INFO("client received: {}", s);
     close(0, "orderly shutdown");
   }

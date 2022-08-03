@@ -116,8 +116,8 @@ public:
     return Timestamp{ts.tv_sec, int(ts.tv_nsec / 1000)};
   }
 
-  static Timestamp max() { return Timestamp{std::numeric_limits<value_type>::max()}; }
-  static Timestamp min() { return Timestamp{std::numeric_limits<value_type>::lowest()}; }
+  static constexpr Timestamp max() { return Timestamp{std::numeric_limits<value_type>::max()}; }
+  static constexpr Timestamp min() { return Timestamp{std::numeric_limits<value_type>::lowest()}; }
   ///@}
 
   ///@{ @name Ordering
@@ -347,10 +347,12 @@ public:
 
   ///@brief The distance (in seconds) between two Timestamps.
   ///       I.e., `(b - a)` in seconds.
-  friend inline double distance(const Timestamp& a, const Timestamp& b) { return a.seconds_to(b); }
+  friend constexpr double distance(const Timestamp& a, const Timestamp& b) {
+    return a.seconds_to(b);
+  }
 
   /// @brief Add seconds to a timestamp, returning a new instance by value.
-  friend inline Timestamp add_seconds(const Timestamp& t, double s) {
+  friend constexpr Timestamp add_seconds(const Timestamp& t, double s) {
     Timestamp r(t);
     r.add_seconds(s);
     return r;

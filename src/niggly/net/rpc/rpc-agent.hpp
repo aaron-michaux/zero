@@ -23,15 +23,16 @@ class RpcAgent : public WebsocketSession,
 public:
   using ThunkType = std::function<void()>;
 
+  using CallContextType = CallContext<Executor, SteadyTimerType>;
+
   /**
    * @brief Creates a thunk to handle a call represented by the passed `context` object
    * NOTE: The memory pointed to by `data` and `size` may (will) evaporate immediately,
    *       and thus must be deserialized/copied before the thunk is returned.
    * NOTE: `context` holds a pointer back to this object.
    */
-  using CallHandler =
-      std::function<ThunkType(std::shared_ptr<CallContext<Executor, SteadyTimerType>> context,
-                              const void* data, std::size_t size)>;
+  using CallHandler = std::function<ThunkType(std::shared_ptr<CallContextType> context,
+                                              const void* data, std::size_t size)>;
   using CompletionHandler = std::function<void(Status status, const void* data, std::size_t size)>;
 
   using SteadyTimerFactory = std::function<SteadyTimerType()>;
@@ -80,7 +81,7 @@ private:
   /**
    * @brief Safely close resources
    */
-  void on_close(std::error_code ec) override;
+  void on_close(uint16_t code_code, std::string_view reason) override;
 
   /**
    * @brief Method that receives calls from a server agent.

@@ -35,8 +35,10 @@ private:
   void finish_call_locked_(Status status, std::function<bool(BufferType&)> serializer);
 
 public:
-  CallContext(std::shared_ptr<RpcAgent<Executor, SteadyTimerType>> agent, uint64_t request_id,
-              uint32_t call_id, std::chrono::steady_clock::time_point deadline)
+  CallContext(std::shared_ptr<RpcAgent<Executor, SteadyTimerType>> agent, //
+              uint64_t request_id,                                        //
+              uint32_t call_id,                                           //
+              std::chrono::steady_clock::time_point deadline)             //
       : agent_{std::move(agent)}, request_id_{request_id}, deadline_{deadline}, call_id_{call_id} {}
 
   /**
@@ -80,6 +82,11 @@ public:
    * @param serializer A callback that writes the response to a `BufferType`
    */
   void finish_call(Status status, std::function<bool(BufferType&)> serializer = nullptr);
+
+  /**
+   * @brief Human readable string that contains useful debugging-like information about the request.
+   */
+  string to_string() const;
 };
 
 } // namespace niggly::net

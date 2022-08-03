@@ -86,4 +86,9 @@ void CallContext<Extecutor, SteadyTimerType>::finish_call_locked_(
   }
 }
 
+template <typename Extecutor, typename SteadyTimerType>
+string CallContext<Extecutor, SteadyTimerType>::to_string() const {
+  return format("hello");
+}
+
 } // namespace niggly::net

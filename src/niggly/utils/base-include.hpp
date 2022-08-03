@@ -45,6 +45,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <span>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -58,25 +59,22 @@
 #include <cstring>
 #include <limits>
 
-namespace actions
-{
+namespace actions {
 using namespace ranges::actions;
 }
 
-namespace views
-{
+namespace views {
 using namespace ranges::views;
 }
 
-namespace niggly
-{
+namespace niggly {
 // -----------------------------------------------------------------------------
 
 using tl::expected;
 using tl::make_unexpected;
 using tl::unexpected;
 
-using sso23::format;
+using fmt::format;
 
 using ofats::any_invocable;
 using std::function;
@@ -127,8 +125,7 @@ using namespace sso23::literals;
 
 } // namespace niggly
 
-namespace zero
-{
+namespace zero {
 using namespace niggly;
 }
 
@@ -153,72 +150,65 @@ using namespace niggly;
 // --------------------------------------------------------------------- Logging
 
 #ifdef DEBUG_BUILD
-#define TRACE(fmt, ...)                                                         \
-   {                                                                            \
-      using namespace niggly::logging::detail;                                  \
-      ::niggly::logging::log_trace(logging::debug_logger(),                     \
-                                   "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                   __FILE__,                                    \
-                                   __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define TRACE(fmt, ...)                                                                            \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_trace(logging::debug_logger(),                                          \
+                                 "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,            \
+                                 __LINE__ __VA_OPT__(, ) __VA_ARGS__);                             \
+  }
 
-#define LOG_DEBUG(fmt, ...)                                                     \
-   {                                                                            \
-      using namespace niggly::logging::detail;                                  \
-      ::niggly::logging::log_debug(logging::debug_logger(),                     \
-                                   "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                   __FILE__,                                    \
-                                   __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define LOG_DEBUG(fmt, ...)                                                                        \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_debug(logging::debug_logger(),                                          \
+                                 "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,            \
+                                 __LINE__ __VA_OPT__(, ) __VA_ARGS__);                             \
+  }
 #else
 #define TRACE(fmt, ...)
 #define LOG_DEBUG(fmt, ...)
 #endif
 
-#define INFO(fmt, ...)                                                         \
-   {                                                                           \
-      using namespace niggly::logging::detail;                                 \
-      ::niggly::logging::log_info(logging::debug_logger(),                     \
-                                  "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                  __FILE__,                                    \
-                                  __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define INFO(fmt, ...)                                                                             \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_info(logging::debug_logger(),                                           \
+                                "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,             \
+                                __LINE__ __VA_OPT__(, ) __VA_ARGS__);                              \
+  }
 
-#define WARN(fmt, ...)                                                         \
-   {                                                                           \
-      using namespace niggly::logging::detail;                                 \
-      ::niggly::logging::log_warn(logging::debug_logger(),                     \
-                                  "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                  __FILE__,                                    \
-                                  __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define WARN(fmt, ...)                                                                             \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_warn(logging::debug_logger(),                                           \
+                                "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,             \
+                                __LINE__ __VA_OPT__(, ) __VA_ARGS__);                              \
+  }
 
-#define LOG_ERR(fmt, ...)                                                       \
-   {                                                                            \
-      using namespace niggly::logging::detail;                                  \
-      ::niggly::logging::log_error(logging::debug_logger(),                     \
-                                   "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                   __FILE__,                                    \
-                                   __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define LOG_ERR(fmt, ...)                                                                          \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_error(logging::debug_logger(),                                          \
+                                 "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,            \
+                                 __LINE__ __VA_OPT__(, ) __VA_ARGS__);                             \
+  }
 
-#define CRITICAL(fmt, ...)                                                      \
-   {                                                                            \
-      using namespace niggly::logging::detail;                                  \
-      ::niggly::logging::log_fatal(logging::debug_logger(),                     \
-                                   "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                   __FILE__,                                    \
-                                   __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define CRITICAL(fmt, ...)                                                                         \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_fatal(logging::debug_logger(),                                          \
+                                 "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,            \
+                                 __LINE__ __VA_OPT__(, ) __VA_ARGS__);                             \
+  }
 
-#define FATAL(fmt, ...)                                                         \
-   {                                                                            \
-      using namespace niggly::logging::detail;                                  \
-      ::niggly::logging::log_fatal(logging::debug_logger(),                     \
-                                   "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, \
-                                   __FILE__,                                    \
-                                   __LINE__ __VA_OPT__(, ) __VA_ARGS__);        \
-   }
+#define FATAL(fmt, ...)                                                                            \
+  {                                                                                                \
+    using namespace niggly::logging::detail;                                                       \
+    ::niggly::logging::log_fatal(logging::debug_logger(),                                          \
+                                 "[\x1b[4m\x1b[97m{}:{}\x1b[0m] " fmt##_cfmt, __FILE__,            \
+                                 __LINE__ __VA_OPT__(, ) __VA_ARGS__);                             \
+  }
 
 #ifdef Expects
 #undef Expects
@@ -226,8 +216,9 @@ using namespace niggly;
 #ifdef NDEBUG
 #define Expects(condition)
 #else
-#define Expects(condition) \
-   if(!likely(condition)) FATAL("precondition failed: {}", #condition);
+#define Expects(condition)                                                                         \
+  if (!likely(condition))                                                                          \
+    FATAL("precondition failed: {}", #condition);
 #endif
 
 #ifdef Ensures
@@ -236,8 +227,9 @@ using namespace niggly;
 #ifdef NDEBUG
 #define Ensures(condition)
 #else
-#define Ensures(condition) \
-   if(!likely(condition)) FATAL("postcondition failed: {}", #condition);
+#define Ensures(condition)                                                                         \
+  if (!likely(condition))                                                                          \
+    FATAL("postcondition failed: {}", #condition);
 #endif
 
 #if defined __clang__

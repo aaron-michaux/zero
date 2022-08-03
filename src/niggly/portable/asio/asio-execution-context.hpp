@@ -31,6 +31,7 @@ private:
 
 public:
   using ExecutorType = boost::asio::io_context::executor_type;
+  using SteadyTimerType = boost::asio::steady_timer;
 
   AsioExecutionContext(boost::asio::io_context& io_context, std::size_t thread_pool_size = 0)
       : io_context_{io_context}, size_{thread_pool_size == 0 ? std::thread::hardware_concurrency()
@@ -58,6 +59,9 @@ public:
 
   /** @brief Return the executor for running jobs on the server pool */
   ExecutorType get_executor() const { return io_context_.get_executor(); }
+
+  /** @brief Create a new steady timer bound to this execution context */
+  SteadyTimerType make_steady_timer() const { return SteadyTimerType{io_context_}; }
 
   /** @brief Direct access to the underlying io_context */
   // boost::asio::io_context& io_context() { return io_context_; }

@@ -16,8 +16,8 @@ namespace niggly::net ::detail {
 
 // ---------------------------------------------------------------------------------------- Encoders
 
-using enc_ptr_type = char*;
-using dec_ptr_type = const char*;
+using enc_ptr_type = std::byte*;
+using dec_ptr_type = const std::byte*;
 
 template <typename T> void encode_integer(enc_ptr_type& ptr, T value) {
   boost::endian::native_to_big_inplace(value);
@@ -72,7 +72,7 @@ bool encode_request_header(BufferType& buffer, uint64_t request_id, uint32_t cal
 }
 
 bool decode(RequestEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = static_cast<const char*>(data);
+  auto ptr = static_cast<const std::byte*>(data);
   auto remaining = size;
 
   int8_t is_request = 0;
@@ -114,7 +114,7 @@ bool encode_response_header(BufferType& buffer, uint64_t request_id, const Statu
 }
 
 bool decode(ResponseEnvelopeHeader& header, const void* data, std::size_t size) {
-  auto ptr = static_cast<const char*>(data);
+  auto ptr = static_cast<const std::byte*>(data);
   auto remaining = size;
 
   int8_t is_request = 0;

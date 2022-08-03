@@ -351,10 +351,10 @@ public:
       return;
     }
 
-    const void* data = buffer_.data().data();
+    const std::byte* data = static_cast<std::byte*>(buffer_.data().data());
     std::size_t size = buffer_.data().size();
     try {
-      external_session_->on_receive(data, size);
+      external_session_->on_receive(std::span<const std::byte>{data, size});
     } catch (std::exception& e) {
       FATAL("callback `on_receive` must not throw: {}", e.what());
     } catch (...) {

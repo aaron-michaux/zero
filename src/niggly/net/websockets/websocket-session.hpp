@@ -94,7 +94,7 @@ public:
    * + `data` and `size` is the payload of the message. It must be decoded immediately,
    *   because the underlying buffer will be reused.
    */
-  virtual void on_receive(const void* data, std::size_t size) = 0;
+  virtual void on_receive(std::span<const std::byte> payload) = 0;
 
   /**
    * @brief Should result in the resouce being freed
@@ -124,9 +124,11 @@ public:
  * @param port Port to connect to.
  *
  * A copy `session` is stored internally by the websocket driver, and the instance will
- * stay alive at least until the socket is closed or errors.
+ * stay alive at least until the socket errors or is closed.
  */
-void connect(std::shared_ptr<WebsocketSession> session, boost::asio::io_context& io_context,
-             std::string_view host, uint16_t port);
+void connect(std::shared_ptr<WebsocketSession> session, //
+             boost::asio::io_context& io_context,       //
+             std::string_view host,                     //
+             uint16_t port);                            //
 
 } // namespace niggly::net
