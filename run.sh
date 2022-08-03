@@ -117,7 +117,7 @@ while [ "$#" -gt "0" ] ; do
 
     [ "$1" = "-h" ] || [ "$1" = "--help" ] && show_usage && exit 0
     
-    [ "$1" = "--" ]        && break
+    [ "$1" = "--" ]        && shift && break
     
     break
 done
