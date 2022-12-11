@@ -1,6 +1,6 @@
 
-#ifndef ZERO__STDINC_HPP__INCLUDE_GUARD__
-#define ZERO__STDINC_HPP__INCLUDE_GUARD__
+#ifndef PROJECT__STDINC_HPP__INCLUDE_GUARD__
+#define PROJECT__STDINC_HPP__INCLUDE_GUARD__
 
 #include "config.hpp"
 

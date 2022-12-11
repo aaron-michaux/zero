@@ -30,28 +30,42 @@ The `./run.sh` script is a front end to the Makefile... it:
  * Runs make
  * Runs the code, including under gdb.
 
-### Plan
+### Technologies To Learn
+ * P2300, senders/receivers
+ * Ranges
+ * Modules (when clang-scan-deps is available)
+ * Concepts
+ * source_location
+ * Calendar/Time Zone library
+ * jthread
+ * owned<T> (dumb) smart pointer (library)
 
 #### Build System
 
+ * cmake (groan)
  * LTO
  * unity build
  * asan/usan/tsan/debug/release
- * testing/coverage
+ * testing with gtest/catch
  * constexpr-testing
- * benchmark (?)
+ * fuzz testing
+ * coverage
+ * benchmark
+ * compiled examples
+ * doxygen
 
 #### Subsystems
 
- * websockets -- websockets to work in WebAssembly
- * Client/server rpc service with push
- * SDL/ImGUI (?) Do I learn Qt6 (?)
- * scheduler to do co-routines
- * test timers on threadpool
- * use ranges with string methods
- * Make every string function aware of custom string types (ranges)
- * Statemachine, with undo/redo checkpoints (external polymorphism?)
- * Curses server with logging to file (tail -f) Always wanted to do this
+ * refined "niggly" library. (Rename?)
+   - Make every string function aware of custom string types (ranges)
+   - Polyfill methods
+ * websockets -- websockets to work in WebAssembly (through Javascript), and stand alone executable
+ * Symmetric client/server rpc service over websocket layer
+ * cpp_asio_grpc_unifex, a grpc example
+ * StateMachine, with undo/redo checkpoints (external polymorphism?)
+ * User Interface
+   - SDL/ImGUI of Webassembly
+   - Curses server with logging to file (tail -f) Always wanted to do this
  
  
 

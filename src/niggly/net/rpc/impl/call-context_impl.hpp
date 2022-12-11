@@ -12,6 +12,7 @@ template <typename Extecutor, typename SteadyTimerType>
 void CallContext<Extecutor, SteadyTimerType>::cancel() {
   std::lock_guard lock{padlock_};
   is_cancelled_ = true;
+  // TODO: stop token...
   finish_call_locked_({StatusCode::CANCELLED}, nullptr);
 }
 

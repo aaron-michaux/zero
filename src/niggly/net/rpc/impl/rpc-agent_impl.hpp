@@ -42,9 +42,9 @@ void RpcAgent<Executor, SteadyTimerType>::perform_rpc_call(
   response.completion = std::move(completion);
 
   if (deadline_millis > 0) { // Setup the timeout
-    response.timer = timer_factory_();
-    response.timer.expires_after(std::chrono::milliseconds{deadline_millis});
-    response.timer.async_wait(
+    response.timeout = timer_factory_();
+    response.timeout->expires_after(std::chrono::milliseconds{deadline_millis});
+    response.timeout->async_wait(
         [weak = this->weak_from_this(), request_id](const boost::system::error_code& ec) {
           if (!ec) {
             auto ptr = weak.lock();

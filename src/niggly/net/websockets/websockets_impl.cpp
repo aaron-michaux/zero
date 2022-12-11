@@ -115,10 +115,14 @@ class Session : public std::enable_shared_from_this<Session> {
 public:
   // Takes ownership of the socket -- for building server-side sessions
   Session(uint64_t id, asio::ip::tcp::socket&& socket, asio::ssl::context& ctx)
-      : id_{id}, ws_{std::move(socket), ctx}, resolver_{ws_.get_executor()} {}
+      : id_{id}, ws_{std::move(socket), ctx}, resolver_{ws_.get_executor()} {
+    ws_.binary(true);
+  }
 
   Session(asio::io_context& ioc, asio::ssl::context& ctx)
-      : ws_{asio::make_strand(ioc), ctx}, resolver_{asio::make_strand(ioc)} {}
+      : ws_{asio::make_strand(ioc), ctx}, resolver_{asio::make_strand(ioc)} {
+    ws_.binary(true);
+  }
 
   ~Session() {
     if (on_close_thunk_)

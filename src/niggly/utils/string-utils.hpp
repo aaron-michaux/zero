@@ -211,7 +211,9 @@ inline sso23::string str_precise(double v) {
  * @ingroup niggly-strings
  * @brief The raw hex string of `data`, as if via the shell command `xxd`
  */
-constexpr sso23::string str(const void* data, size_t sz);
+sso23::string str(const void* data, size_t sz);
+sso23::string str(std::span<std::byte> data);
+sso23::string str(std::span<const std::byte> data);
 
 /**
  * @ingroup niggly-strings

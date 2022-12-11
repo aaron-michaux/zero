@@ -127,12 +127,28 @@ void testzappy() {
   }
 }
 
+static void example_unifex_hello_world() {
+  namespace ex = unifex;
+  using namespace niggly;
+
+  ex::scheduler auto sch = ex::thread_pool.scheduler();
+  ex::sender auto begin = ex::schedule(sch);
+  ex::sender auto hi = ex::then(begin, [] {
+    std::cout << "Hello world! Have an int.";
+    return 13;
+  });
+  ex::sender auto add_42 = ex::then(hi, [](int arg) { return arg + 42; });
+
+  auto [i] = ex::this_thread::sync_wait(add_42).value();
+  TRACE("i = {}", i);
+}
+
 namespace niggly::unifex::test {
 
 // -------------------------------------------------------------------
 //
 CATCH_TEST_CASE("UnifexIO", "[unifex-io]") {
-  CATCH_SECTION("unifex-io") { testzappy(); }
+  CATCH_SECTION("unifex-io") { example_unifex_hello_world(); }
 }
 
 } // namespace niggly::unifex::test
