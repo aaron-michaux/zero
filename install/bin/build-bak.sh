@@ -4,26 +4,52 @@ set -e
 
 # sudo echo "Got root permissions"
 
+TOOL_ROOT=/opt/tools
 OPT_ROOT=/opt/cc
 ARCH_ROOT=/opt/arch
 
-if [ "$(uname)" = "Darwin" ] ; then
-    OSX=1
-    NPROC=$(sysctl -n hw.ncpu)
-    TIMECMD="gtime -v"
-else
-    OSX=0
-    NPROC=$(nproc)
-    TIMECMD="/usr/bin/time -v"
-fi
+show_help()
+{
+    cat <<EOF
+
+   Usage: $(basename $0) OPTION* <tool>
+
+   Option:
+
+      --cleanup           Remove temporary files after building
+      --no-cleanup        Do not remove temporary files after building
+
+   Tool:
+
+      gcc-x.y.z
+      valgrind-x.y.z
+      llvm-x.y.z
+
+   Examples:
+
+      # Install valgrind 3.20 to $TOOL_ROOT/bin
+      > $(basename $0) valgrind-3.20.0
+
+   Repos:
+
+      https://github.com/gcc-mirror/gcc
+      https://github.com/llvm/llvm-project
+      http://www.valgrind.org/downloads
+
+EOF
+}
 
 # -------------------------------------------------- ensure subversion installed
+# If compiling for a different platform 
 
-sudo apt-get install -y \
-     wget subversion automake swig python2.7-dev libedit-dev libncurses5-dev  \
-     python3-dev python3-pip python3-tk python3-lxml python3-six              \
-     libparted-dev flex sphinx-doc guile-2.2 gperf gettext expect tcl dejagnu \
-     libgmp-dev libmpfr-dev libmpc-dev libasan6 lld-10 clang-10
+install_dependencies()
+{
+    sudo apt-get install -y \
+         wget subversion automake swig python2.7-dev libedit-dev libncurses5-dev  \
+         python3-dev python3-pip python3-tk python3-lxml python3-six              \
+         libparted-dev flex sphinx-doc guile-2.2 gperf gettext expect tcl dejagnu \
+         libgmp-dev libmpfr-dev libmpc-dev libasan6 lld-10 clang-10
+}
 
 # ------------------------------------------------------------------ environment
 
@@ -31,11 +57,12 @@ CC_COMPILER=clang-10
 CXX_COMPILER=clang++-10
 LINKER=lld-10
 PYTHON_VERSION="$(python3 --version | awk '{print $2}' | sed 's,.[0-9]$,,')"
+TIMECMD="/usr/bin/time -v"
 
 # ------------------------------------------------------------------------ boost
 
 build_boost()
-{
+{    
     CXX="$1"
     VERSION="$2"
     PREFIX="$3"
@@ -45,6 +72,7 @@ build_boost()
     BOOST_VERSION=1_76_0
     NO_CLEANUP=1
 
+    install_dependencies
     if [ "$NO_CLEANUP" = "1" ] ; then
         TMPD=$HOME/TMP/boost
         mkdir -p $TMPD
@@ -99,6 +127,8 @@ build_llvm()
     local SRC_D="$TMPD/$LLVM_DIR"
     local BUILD_D="$TMPD/build-llvm-${TAG}"
     local INSTALL_PREFIX="${OPT_ROOT}/clang-${CLANG_V}"
+
+    install_dependencies
     
     rm -rf "$BUILD_D"
     mkdir -p "$SRC_D"
@@ -141,7 +171,7 @@ build_llvm()
          -DCMAKE_INSTALL_PREFIX:PATH=${INSTALL_PREFIX} \
          $SRC_D/llvm-project/llvm
 
-    $TIMECMD nice make -j$NPROC 2>$BUILD_D/stderr.text | tee $BUILD_D/stdout.text
+    $TIMECMD nice make -j 2>$BUILD_D/stderr.text | tee $BUILD_D/stdout.text
     sudo make install 2>>$BUILD_D/stderr.text | tee -a $BUILD_D/stdout.text
     cat $BUILD_D/stderr.text   
 }
@@ -164,9 +194,11 @@ build_gcc()
     local TAG="$1"
     local SUFFIX="$1"
     if [ "$2" != "" ] ; then SUFFIX="$2" ; fi
+    install_dependencies
+    
     local MAJOR_VERSION="$(echo "$SUFFIX" | sed 's,\..*$,,')"
-
     local SRCD="$TMPD/$SUFFIX"
+    
     mkdir -p "$SRCD"
     cd "$SRCD"
     if [ ! -d "gcc" ] ;then
@@ -187,23 +219,21 @@ build_gcc()
          --program-suffix=-${MAJOR_VERSION} \
          --enable-checking=release \
          --with-gcc-major-version-only
-    $TIMECMD nice make -j$NPROC 2>$SRCD/build/stderr.text | tee $SRCD/build/stdout.text
+    $TIMECMD nice make -j 2>$SRCD/build/stderr.text | tee $SRCD/build/stdout.text
     make install | tee -a $SRCD/build/stdout.text
 
-    if [ "$OSX" = "0" ] ; then
-        # Install symlinks to /usr/local
-        ensure_link "$PREFIX/bin/gcc-${MAJOR_VERSION}"        /usr/local/bin/gcc-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/g++-${MAJOR_VERSION}"        /usr/local/bin/g++-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcov-${MAJOR_VERSION}"       /usr/local/bin/gcov-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcov-dump-${MAJOR_VERSION}"  /usr/local/bin/gcov-dump-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcov-tool-${MAJOR_VERSION}"  /usr/local/bin/gcov-tool-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcc-ranlib-${MAJOR_VERSION}" /usr/local/bin/gcc-ranlib-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcc-ar-${MAJOR_VERSION}"     /usr/local/bin/gcc-ar-${MAJOR_VERSION}
-        ensure_link "$PREFIX/bin/gcc-nm-${MAJOR_VERSION}"     /usr/local/bin/gcc-nm-${MAJOR_VERSION}
-        ensure_link "$PREFIX/include/c++/${MAJOR_VERSION}"    /usr/local/include/c++/${MAJOR_VERSION}
-        ensure_link "$PREFIX/lib64"                           /usr/local/lib/gcc/${MAJOR_VERSION}
-        ensure_link "$PREFIX/lib/gcc"                         /usr/local/lib/gcc/${MAJOR_VERSION}/gcc
-    fi
+    # Install symlinks to /usr/local
+    ensure_link "$PREFIX/bin/gcc-${MAJOR_VERSION}"        /usr/local/bin/gcc-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/g++-${MAJOR_VERSION}"        /usr/local/bin/g++-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcov-${MAJOR_VERSION}"       /usr/local/bin/gcov-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcov-dump-${MAJOR_VERSION}"  /usr/local/bin/gcov-dump-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcov-tool-${MAJOR_VERSION}"  /usr/local/bin/gcov-tool-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcc-ranlib-${MAJOR_VERSION}" /usr/local/bin/gcc-ranlib-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcc-ar-${MAJOR_VERSION}"     /usr/local/bin/gcc-ar-${MAJOR_VERSION}
+    ensure_link "$PREFIX/bin/gcc-nm-${MAJOR_VERSION}"     /usr/local/bin/gcc-nm-${MAJOR_VERSION}
+    ensure_link "$PREFIX/include/c++/${MAJOR_VERSION}"    /usr/local/include/c++/${MAJOR_VERSION}
+    ensure_link "$PREFIX/lib64"                           /usr/local/lib/gcc/${MAJOR_VERSION}
+    ensure_link "$PREFIX/lib/gcc"                         /usr/local/lib/gcc/${MAJOR_VERSION}/gcc
 }
 
 # ------------------------------------------------------------------------- wasm
@@ -227,7 +257,7 @@ build_gcc()
 build_valgrind()
 {
     VALGRIND_VERSION="$1"
-    URL="http://www.valgrind.org/downloads/valgrind-${VALGRIND_VERSION}.tar.bz2"
+    URL="https://sourceware.org/pub/valgrind/valgrind-${VALGRIND_VERSION}.tar.bz2"
     VAL_D="$TMPD/valgrind-${VALGRIND_VERSION}"
     rm -rf "$VAL_D"
     cd "$TMPD"
@@ -237,32 +267,17 @@ build_valgrind()
     cd "$VAL_D"
     export CC=$CC_COMPILER
     ./autogen.sh
-    ./configure --prefix=/usr/local
+    ./configure --prefix="$TOOL_ROOT"
     nice ionice -c3 make -j$(nproc)
     sudo make install
 }
 
 # ------------------------------------------------------------------------ build
 
-show_help()
-{
-    cat <<EOF
-
-   Usage: $(basename $0) OPTION* <tool>
-
-   Option:
-
-      --cleanup           Remove temporary files after building
-      --no-cleanup        Do not remove temporary files after building
-
-   Tool:
-
-      gcc-x.y.z
-      valgrind-x.y.z
-      llvm-x.y.z
-
-EOF
-}
+if (( $# == 0 )) ; then
+    show_help
+    exit 0
+fi
 
 NO_CLEANUP=1
 ACTION=""
@@ -275,6 +290,7 @@ while (( $# > 0 )) ; do
     [ "$ARG" = "--no-cleanup" ] && NO_CLEANUP=1
     [ "${ARG:0:3}" = "gcc" ] && ACTION="build_gcc ${ARG:4}"
     [ "${ARG:0:4}" = "llvm" ] && ACTION="build_llvm ${ARG:5}"
+    [ "${ARG:0:8}" = "valgrind" ] && ACTION="build_valgrind ${ARG:9}"
 done
 
 if [ "$NO_CLEANUP" = "1" ] ; then

@@ -32,6 +32,7 @@ The `./run.sh` script is a front end to the Makefile... it:
 
 ### Technologies To Learn
  * P2300, senders/receivers
+   - With Linux's io_uring
  * Ranges
  * Modules (when clang-scan-deps is available)
  * Concepts
@@ -39,10 +40,11 @@ The `./run.sh` script is a front end to the Makefile... it:
  * Calendar/Time Zone library
  * jthread
  * owned<T> (dumb) smart pointer (library)
+ * coroutines
 
 #### Build System
 
- * cmake (groan)
+ * arch directory for dependencies
  * LTO
  * unity build
  * asan/usan/tsan/debug/release
@@ -53,6 +55,7 @@ The `./run.sh` script is a front end to the Makefile... it:
  * benchmark
  * compiled examples
  * doxygen
+ * cmake? (groan)
 
 #### Subsystems
 
@@ -67,7 +70,12 @@ The `./run.sh` script is a front end to the Makefile... it:
    - SDL/ImGUI of Webassembly
    - Curses server with logging to file (tail -f) Always wanted to do this
  
- 
-
-
+#### Cyber-Security executive order
+ * Herb Sutter https://youtu.be/ELeZAKCN4tY?t=2439
+ * Executive order on cyber-security, May/8th/2021 https://www.whitehouse.gov/briefing-room/presidential-actions/2021/05/12/executive-order-on-improving-the-nations-cybersecurity/
+ * Dept of Commerce and NiST (national institute standard of technology) charged with asking how to make software safer:
+   https://arxiv.org/pdf/2107.12850
+ * US government funding projects to rewrite C/C++ code
+   - A VM for LLVM bitcode? (Sulong?)
+   - Cppfront/Carbon are "pre-alpha"
 
