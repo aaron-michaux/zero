@@ -30,6 +30,9 @@ The `./run.sh` script is a front end to the Makefile... it:
  * Runs make
  * Runs the code, including under gdb.
 
+###
+ * Spin out install stuff, including `project-config`
+
 ### Technologies To Learn
  * P2300, senders/receivers
    - With Linux's io_uring

@@ -8,12 +8,18 @@ export ARCH_ROOT=/opt/arch
 export CC_COMPILER=clang-10
 export CXX_COMPILER=clang++-10
 export LINKER=lld-10
+
+export CC_COMPILER=/usr/bin/gcc
+export CXX_COMPILER=/usr/bin/g++
+export LINKER=/usr/bin/ld
+
+
 export PYTHON_VERSION="$(python3 --version | awk '{print $2}' | sed 's,.[0-9]$,,')"
 export TIMECMD="/usr/bin/time -v"
 
 export CLEANUP="True"
 
-export CMAKE=cmake
+export CMAKE="$TOOL_ROOT/bin/cmake"
 
 # --------------------------------------------------------------------- Platform
 export IS_UBUNTU=$([ -x /usr/bin/lsb_release ] && lsb_release -a 2>/dev/null | grep -q Ubuntu && echo 1 || echo 0)

@@ -69,24 +69,22 @@ build_llvm()
     # -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m \
     # -DCURSES_LIBRARY=/usr/lib/x86_64-linux-gnu/libncurses.a \
     # -DCURSES_INCLUDE_PATH=/usr/include/ \
+    # -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;libcxx;libcxxabi;libunwind;compiler-rt;lld" \
 
-    nice ionice -c3 cmake -G "Unix Makefiles" \
-         -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;libcxx;libcxxabi;libunwind;compiler-rt;lld;polly" \
-         -DCMAKE_BUILD_TYPE=release \
-         -DCMAKE_C_COMPILER=$CC_COMPILER \
-         -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
-         -DLLVM_ENABLE_ASSERTIONS=Off \
-         -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=Yes \
-         -DLIBCXX_ENABLE_SHARED=YES \
-         -DLIBCXX_ENABLE_STATIC=YES \
-         -DLIBCXX_ENABLE_FILESYSTEM=YES \
-         -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES \
-         -LLVM_ENABLE_LTO=thin \
-         -LLVM_USE_LINKER=$LINKER \
-         -DLLVM_BUILD_LLVM_DYLIB=YES \
-         -DCURSES_LIBRARY=/usr/lib/x86_64-linux-gnu/libncurses.so \
-         -DCURSES_INCLUDE_PATH=/usr/include/ \
-         -DCMAKE_INSTALL_PREFIX:PATH=${INSTALL_PREFIX} \
+    nice ionice -c3 $CMAKE -G "Unix Makefiles" \
+         -D LLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
+         -D LLVM_ENABLE_RUNTIMES="compiler-rt;libc;libcxx;libcxxabi;libunwind" \
+         -D CMAKE_BUILD_TYPE=Release \
+         -D CMAKE_C_COMPILER=$CC_COMPILER \
+         -D CMAKE_CXX_COMPILER=$CXX_COMPILER \
+         -D LLVM_ENABLE_ASSERTIONS=Off \
+         -D LIBCXX_ENABLE_STATIC_ABI_LIBRARY=Yes \
+         -D LIBCXX_ENABLE_SHARED=YES \
+         -D LIBCXX_ENABLE_STATIC=YES \
+         -D LLVM_BUILD_LLVM_DYLIB=YES \
+         -D CURSES_LIBRARY=/usr/lib/x86_64-linux-gnu/libncurses.so \
+         -D CURSES_INCLUDE_PATH=/usr/include/ \
+         -D CMAKE_INSTALL_PREFIX:PATH="$INSTALL_PREFIX" \
          $SRC_D/llvm-project/llvm
 
     $TIMECMD nice make -j$(nproc) 2>$BUILD_D/stderr.text | tee $BUILD_D/stdout.text
@@ -149,15 +147,15 @@ if (( $# == 0 )) ; then
     exit 0
 fi
 
-NO_CLEANUP=1
+CLEANUP="True"
 ACTION=""
 while (( $# > 0 )) ; do
     ARG="$1"
     shift
 
     [ "$ARG" = "-h" ] || [ "$ARG" = "--help" ] && show_help && exit 0
-    [ "$ARG" = "--cleanup" ] && NO_CLEANUP=0 && continue
-    [ "$ARG" = "--no-cleanup" ] && NO_CLEANUP=1 && continue
+    [ "$ARG" = "--cleanup" ] && CLEANUP="True" && continue
+    [ "$ARG" = "--no-cleanup" ] && CLEANUP="False" && continue
     [ "${ARG:0:3}" = "gcc" ] && ACTION="build_gcc ${ARG:4}" && continue
     [ "${ARG:0:4}" = "llvm" ] && ACTION="build_llvm ${ARG:5}" && continue
     [ "${ARG:0:5}" = "clang" ] && ACTION="build_llvm ${ARG:6}" && continue

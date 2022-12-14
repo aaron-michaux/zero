@@ -1,0 +1,3 @@
+[submodule "installation"]
+	path = installation
+	url = git@github.com:aaron-michaux/installation.git
