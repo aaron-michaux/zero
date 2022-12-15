@@ -4,7 +4,7 @@
 #include "niggly/portable/asio/asio-execution-context.hpp"
 #include "niggly/net/websockets/websocket-server.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace niggly::test {
 

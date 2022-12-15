@@ -3,7 +3,7 @@
 
 #include "stdinc.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/associated_executor.hpp>

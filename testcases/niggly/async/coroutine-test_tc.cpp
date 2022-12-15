@@ -4,7 +4,7 @@
 
 #include "stdinc.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/associated_executor.hpp>
@@ -18,8 +18,7 @@
 #include <numeric>
 #include <vector>
 
-namespace niggly::coroutines
-{
+namespace niggly::coroutines {
 /*
 struct suspend_always
 {
@@ -55,8 +54,7 @@ struct suspend_never
 
 } // namespace niggly::coroutines
 
-namespace niggly::async
-{
+namespace niggly::async {
 
 // ------------------------------------------------------------------- TEST_CASE
 //

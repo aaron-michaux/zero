@@ -5,7 +5,7 @@
 // TODO(remove)
 #include "stdinc.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace niggly::cli::tests {
 CATCH_TEST_CASE("CliUtils", "[cli-utils]") {

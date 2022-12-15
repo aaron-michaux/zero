@@ -1,6 +1,8 @@
 
 # zero
 
+This is all quite broken at the moment. I wrote my own implementation of C++ futures, and then realized that I really need to learn P2300 senders+receivers.
+
 ### About
 
 This repo is a playground where I teach myself new stuff about C++.

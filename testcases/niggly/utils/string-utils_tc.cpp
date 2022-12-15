@@ -3,7 +3,7 @@
 
 #include "niggly/utils/string-utils.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace niggly::tests {
 

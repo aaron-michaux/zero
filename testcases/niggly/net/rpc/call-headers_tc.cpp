@@ -3,7 +3,7 @@
 
 #include "niggly/net/rpc/call-headers.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace niggly::net::detail::test {
 

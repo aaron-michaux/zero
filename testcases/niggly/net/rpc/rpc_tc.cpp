@@ -6,7 +6,7 @@
 #include "niggly/net/websockets/websocket-server.hpp"
 #include "niggly/net/rpc/rpc-agent.hpp"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 namespace niggly::net::test {
 
