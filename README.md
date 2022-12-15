@@ -1,25 +1,14 @@
 
 # zero
 
-This is all quite broken at the moment. I wrote my own implementation of C++ futures, and then realized that I really need to learn P2300 senders+receivers.
-
 ### About
 
 This repo is a playground where I teach myself new stuff about C++.
 
-### Dependencies
-
- * https://github.com/axboe/liburing
- * https://github.com/facebookexperimental/libunifex.git
- 
-```
-git clone https://github.com/facebookexperimental/libunifex.git
-cd libunifex
-cmake -H. -Bbuild -DCMAKE_CXX_STANDARD:STRING=20 -DCMAKE_INSTALL_PREFIX=/usr/local
-cd build
-make -j
-sudo make install
-```
+This is all quite broken at the moment. I wrote my own implementation of C++ futures, and then realized that I really need to learn P2300 senders+receivers. Starting out on that made me realize 
+that I needed to move on from header-only libraries. (libunifex needs to be built.) And also 
+use git submodules. The [niggly](https://github.com/aaron-michaux/niggly) contains the
+base library along with install scripts.
 
 ### Building
 
